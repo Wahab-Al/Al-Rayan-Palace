@@ -1,7 +1,10 @@
 <section class="login-page">
   <div class="login-card">
     <div class="login-brand">
-      <img src="/alrayan-logo.png" alt="Al Rayan Palace" />
+      <img
+        src="/alrayan-logo.png"
+        alt="Al Rayan Palace"
+      />
 
       <!-- <span>
         Al Rayan Palace
@@ -22,7 +25,11 @@
       </div>
     }
 
-    <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="submit()"
+      novalidate
+    >
       <div class="field">
         <label for="username"> Username </label>
 
@@ -47,7 +54,10 @@
         />
       </div>
 
-      <button type="submit" [disabled]="loading()">
+      <button
+        type="submit"
+        [disabled]="loading()"
+      >
         @if (loading()) {
           Signing in...
         } @else {
@@ -56,6 +66,12 @@
       </button>
     </form>
 
-    <button type="button" class="back-home" (click)="goHome()">← Back to store</button>
+    <button
+      type="button"
+      class="back-home"
+      (click)="goHome()"
+    >
+      ← Back to store
+    </button>
   </div>
 </section>

@@ -35,6 +35,8 @@ describe('ProductCard', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(component).toBeTruthy();
     expect(compiled.textContent).toContain('Modern Sofa');
-    expect(compiled.querySelector('a.media-link')?.getAttribute('href')).toBe('/products/product-1');
+    expect(compiled.querySelector('a.media-link')?.getAttribute('href')).toBe(
+      '/products/product-1',
+    );
   });
 });

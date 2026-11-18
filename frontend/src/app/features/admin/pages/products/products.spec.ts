@@ -1,9 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 
@@ -36,9 +33,7 @@ describe('Products', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
 
-    httpTesting
-      .expectOne((request) => request.url.endsWith('/admin/products'))
-      .flush(response);
+    httpTesting.expectOne((request) => request.url.endsWith('/admin/products')).flush(response);
     fixture.detectChanges();
   });
 
@@ -60,8 +55,7 @@ describe('Products', () => {
 
       const request = httpTesting.expectOne(
         (candidate) =>
-          candidate.url.endsWith('/admin/products') &&
-          candidate.params.get('search') === 'ayan',
+          candidate.url.endsWith('/admin/products') && candidate.params.get('search') === 'ayan',
       );
       request.flush(response);
     } finally {

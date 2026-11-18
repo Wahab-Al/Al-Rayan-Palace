@@ -7,35 +7,18 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const category =
-      typeof req.query.category === 'string'
-        ? req.query.category
-        : 'all';
+    const category = typeof req.query.category === 'string' ? req.query.category : 'all';
 
-    const featured =
-      typeof req.query.featured === 'string'
-        ? req.query.featured
-        : 'all';
+    const featured = typeof req.query.featured === 'string' ? req.query.featured : 'all';
 
-    const parsedPage =
-      typeof req.query.page === 'string'
-        ? Number.parseInt(req.query.page, 10)
-        : 1;
+    const parsedPage = typeof req.query.page === 'string' ? Number.parseInt(req.query.page, 10) : 1;
 
     const parsedLimit =
-      typeof req.query.limit === 'string'
-        ? Number.parseInt(req.query.limit, 10)
-        : 10;
+      typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : 10;
 
-    const page =
-      Number.isFinite(parsedPage) && parsedPage > 0
-        ? parsedPage
-        : 1;
+    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-    const limit =
-      Number.isFinite(parsedLimit) && parsedLimit > 0
-        ? Math.min(parsedLimit, 10)
-        : 10;
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 10) : 10;
 
     const filter: Record<string, unknown> = {};
 
@@ -103,17 +86,13 @@ router.get('/', async (req, res) => {
         id: product._id.toString(),
         title: product.title,
 
-        ...(product.description
-          ? { description: product.description }
-          : {}),
+        ...(product.description ? { description: product.description } : {}),
 
         category: product.category,
         mediaUrl: product.mediaUrl,
         mediaType: product.mediaType,
 
-        ...(product.mediaPublicId
-          ? { mediaPublicId: product.mediaPublicId }
-          : {}),
+        ...(product.mediaPublicId ? { mediaPublicId: product.mediaPublicId } : {}),
 
         featured: product.featured,
         createdAt: product.createdAt,
@@ -122,20 +101,13 @@ router.get('/', async (req, res) => {
 
       total,
       page,
-      pages: Math.max(
-        1,
-        Math.ceil(total / limit),
-      ),
+      pages: Math.max(1, Math.ceil(total / limit)),
 
       categories: categories.sort(),
 
-      categoryPreviews:
-        categoryPreviews.filter(
-          (
-            item,
-          ): item is NonNullable<typeof item> =>
-            item !== null,
-        ),
+      categoryPreviews: categoryPreviews.filter(
+        (item): item is NonNullable<typeof item> => item !== null,
+      ),
 
       allPreview: allPreview
         ? {

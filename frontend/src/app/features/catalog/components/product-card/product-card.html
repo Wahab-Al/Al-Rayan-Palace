@@ -6,7 +6,12 @@
   >
     <div class="product-media">
       @if (product().mediaType === 'image') {
-        <img [src]="product().mediaUrl" [alt]="product().title" loading="lazy" decoding="async" />
+        <img
+          [src]="product().mediaUrl"
+          [alt]="product().title"
+          loading="lazy"
+          decoding="async"
+        />
       } @else {
         <video
           [src]="product().mediaUrl"
@@ -41,6 +46,11 @@
       </p>
     }
 
-    <a class="details-link" [routerLink]="['/products', product().id]"> View Product </a>
+    <a
+      class="details-link"
+      [routerLink]="['/products', product().id]"
+    >
+      View Product
+    </a>
   </div>
 </article>

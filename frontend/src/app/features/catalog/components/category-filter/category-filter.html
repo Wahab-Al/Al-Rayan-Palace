@@ -17,9 +17,18 @@
       <div class="category-circle">
         @if (allPreview()) {
           @if (allPreview()!.mediaType === 'image') {
-            <img [src]="allPreview()!.mediaUrl" alt="All products" />
+            <img
+              [src]="allPreview()!.mediaUrl"
+              alt="All products"
+            />
           } @else {
-            <video [src]="allPreview()!.mediaUrl" muted autoplay loop playsinline></video>
+            <video
+              [src]="allPreview()!.mediaUrl"
+              muted
+              autoplay
+              loop
+              playsinline
+            ></video>
           }
         }
       </div>
@@ -36,7 +45,11 @@
       >
         <div class="category-circle">
           @if (category.mediaType === 'image') {
-            <img [src]="category.mediaUrl" [alt]="category.name" loading="lazy" />
+            <img
+              [src]="category.mediaUrl"
+              [alt]="category.name"
+              loading="lazy"
+            />
           } @else {
             <video
               [src]="category.mediaUrl"

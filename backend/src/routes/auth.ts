@@ -3,10 +3,7 @@ import bcrypt from 'bcrypt';
 
 import config from '../config/env.js';
 
-import {
-  ADMIN_COOKIE_NAME,
-  createAdminToken,
-} from '../services/auth.service.js';
+import { ADMIN_COOKIE_NAME, createAdminToken } from '../services/auth.service.js';
 
 const router = Router();
 
@@ -14,10 +11,7 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (
-      typeof username !== 'string' ||
-      typeof password !== 'string'
-    ) {
+    if (typeof username !== 'string' || typeof password !== 'string') {
       res.status(400).json({
         message: 'Username and password are required',
       });
@@ -33,10 +27,7 @@ router.post('/login', async (req, res) => {
       return;
     }
 
-    const passwordMatches = await bcrypt.compare(
-      password,
-      config.ADMIN_PASSWORD_HASH,
-    );
+    const passwordMatches = await bcrypt.compare(password, config.ADMIN_PASSWORD_HASH);
 
     if (!passwordMatches) {
       res.status(401).json({
@@ -46,9 +37,7 @@ router.post('/login', async (req, res) => {
       return;
     }
 
-    const token = createAdminToken(
-      config.ADMIN_USERNAME,
-    );
+    const token = createAdminToken(config.ADMIN_USERNAME);
 
     // res.cookie(
     //   ADMIN_COOKIE_NAME,
@@ -62,26 +51,17 @@ router.post('/login', async (req, res) => {
     //     path: '/',
     //   },
     // );
-    res.cookie(
-      ADMIN_COOKIE_NAME,
-      token,
-      {
-        httpOnly: true,
+    res.cookie(ADMIN_COOKIE_NAME, token, {
+      httpOnly: true,
 
-        secure:
-          config.NODE_ENV === 'production',
+      secure: config.NODE_ENV === 'production',
 
-        sameSite:
-          config.NODE_ENV === 'production'
-            ? 'none'
-            : 'lax',
+      sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
 
-        maxAge:
-          config.JWT_EXPIRE_SECONDS * 1000,
+      maxAge: config.JWT_EXPIRE_SECONDS * 1000,
 
-        path: '/',
-      },
-    );
+      path: '/',
+    });
 
     res.status(200).json({
       user: {
@@ -109,22 +89,15 @@ router.post('/logout', (_req, res) => {
   //     path: '/',
   //   },
   // );
-  res.clearCookie(
-    ADMIN_COOKIE_NAME,
-    {
-      httpOnly: true,
+  res.clearCookie(ADMIN_COOKIE_NAME, {
+    httpOnly: true,
 
-      secure:
-        config.NODE_ENV === 'production',
+    secure: config.NODE_ENV === 'production',
 
-      sameSite:
-        config.NODE_ENV === 'production'
-          ? 'none'
-          : 'lax',
+    sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
 
-      path: '/',
-    },
-  );
+    path: '/',
+  });
 
   res.json({
     message: 'Logged out',

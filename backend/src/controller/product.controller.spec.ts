@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  buildAdminProductFilter,
-  createProduct,
-  parseInstagramUrl,
-} from './product.controller.js';
+import { buildAdminProductFilter, createProduct, parseInstagramUrl } from './product.controller.js';
 
 test('builds product filters for search, category, media type, and featured status', () => {
   const filter = buildAdminProductFilter({
@@ -67,10 +63,7 @@ test('accepts HTTPS Instagram links and rejects other hosts or protocols', () =>
     () => parseInstagramUrl('http://www.instagram.com/p/example/'),
     /Instagram reference/,
   );
-  assert.throws(
-    () => parseInstagramUrl('https://example.com/p/example/'),
-    /Instagram reference/,
-  );
+  assert.throws(() => parseInstagramUrl('https://example.com/p/example/'), /Instagram reference/);
   assert.throws(
     () => parseInstagramUrl('https://user@www.instagram.com/p/example/'),
     /Instagram reference/,

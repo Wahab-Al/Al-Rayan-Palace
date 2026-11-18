@@ -47,31 +47,22 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 
-app.get(
-  '/api/auth/me',
-  requireAdmin,
-  (req, res) => {
-    res.json({
-      authenticated: true,
-      admin: req.admin,
-    });
-  },
-);
+app.get('/api/auth/me', requireAdmin, (req, res) => {
+  res.json({
+    authenticated: true,
+    admin: req.admin,
+  });
+});
 
 app.use('/api/products', productsRouter);
 
-app.use(
-  '/api/admin/products',
-  adminProductsRouter,
-);
+app.use('/api/admin/products', adminProductsRouter);
 
 const start = async () => {
   await connectDB(config.MONGO_URI);
 
   app.listen(config.PORT, () => {
-    console.log(
-      `Server running on http://localhost:${config.PORT}`,
-    );
+    console.log(`Server running on http://localhost:${config.PORT}`);
   });
 };
 

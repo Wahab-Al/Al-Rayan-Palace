@@ -6,10 +6,17 @@
       <p class="subtitle">Manage your furniture catalog.</p>
     </div>
 
-    <a class="primary-button" routerLink="/admin/products/new">Add Product</a>
+    <a
+      class="primary-button"
+      routerLink="/admin/products/new"
+      >Add Product</a
+    >
   </div>
 
-  <form class="filters-form" (submit)="onSearchSubmit($event)">
+  <form
+    class="filters-form"
+    (submit)="onSearchSubmit($event)"
+  >
     <div class="filter-field search-field">
       <label for="product-search">Search products</label>
       <input
@@ -64,8 +71,19 @@
     </div>
 
     <div class="filter-actions">
-      <button class="primary-button" type="submit">Search</button>
-      <button class="action-button" type="button" (click)="clearFilters()">Clear</button>
+      <button
+        class="primary-button"
+        type="submit"
+      >
+        Search
+      </button>
+      <button
+        class="action-button"
+        type="button"
+        (click)="clearFilters()"
+      >
+        Clear
+      </button>
     </div>
   </form>
 
@@ -101,9 +119,16 @@
                 <div class="product-cell">
                   <div class="thumbnail">
                     @if (product.mediaType === 'image') {
-                      <img [src]="product.mediaUrl" [alt]="product.title" />
+                      <img
+                        [src]="product.mediaUrl"
+                        [alt]="product.title"
+                      />
                     } @else {
-                      <video [src]="product.mediaUrl" muted playsinline></video>
+                      <video
+                        [src]="product.mediaUrl"
+                        muted
+                        playsinline
+                      ></video>
                     }
                   </div>
 
@@ -150,7 +175,10 @@
     </div>
 
     @if (totalPages() > 1) {
-      <nav class="pagination" aria-label="Products pagination">
+      <nav
+        class="pagination"
+        aria-label="Products pagination"
+      >
         <button
           type="button"
           [disabled]="currentPage() === 1"
@@ -160,7 +188,11 @@
         </button>
 
         @for (page of pageNumbers(); track page) {
-          <button type="button" [class.active]="page === currentPage()" (click)="changePage(page)">
+          <button
+            type="button"
+            [class.active]="page === currentPage()"
+            (click)="changePage(page)"
+          >
             {{ page }}
           </button>
         }
@@ -177,15 +209,33 @@
   }
 
   @if (productToDelete(); as product) {
-    <div class="modal-backdrop" (click)="closeDeleteModal()">
-      <div class="delete-modal" (click)="$event.stopPropagation()">
+    <div
+      class="modal-backdrop"
+      (click)="closeDeleteModal()"
+    >
+      <div
+        class="delete-modal"
+        (click)="$event.stopPropagation()"
+      >
         <div class="modal-icon">!</div>
         <h2>Delete product?</h2>
-        <p>Are you sure you want to delete <strong>{{ product.title }}</strong>?</p>
+        <p>
+          Are you sure you want to delete <strong>{{ product.title }}</strong>?
+        </p>
         <p class="modal-warning">This action cannot be undone.</p>
         <div class="modal-actions">
-          <button type="button" class="cancel-button" (click)="closeDeleteModal()">Cancel</button>
-          <button type="button" class="confirm-delete-button" (click)="confirmDelete()">
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="closeDeleteModal()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="confirm-delete-button"
+            (click)="confirmDelete()"
+          >
             Delete
           </button>
         </div>

@@ -1,5 +1,10 @@
 <section class="product-detail">
-  <a class="back-link" routerLink="/"> ← Back to catalog </a>
+  <a
+    class="back-link"
+    routerLink="/"
+  >
+    ← Back to catalog
+  </a>
 
   @if (loading()) {
     <div class="state">Loading product...</div>
@@ -15,9 +20,16 @@
     <div class="detail-grid">
       <div class="media-wrapper">
         @if (item.mediaType === 'image') {
-          <img [src]="item.mediaUrl" [alt]="item.title" />
+          <img
+            [src]="item.mediaUrl"
+            [alt]="item.title"
+          />
         } @else {
-          <video [src]="item.mediaUrl" controls playsinline></video>
+          <video
+            [src]="item.mediaUrl"
+            controls
+            playsinline
+          ></video>
         }
       </div>
 

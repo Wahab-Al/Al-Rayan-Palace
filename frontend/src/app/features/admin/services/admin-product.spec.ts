@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { AdminProductService } from './admin-product';
 
@@ -34,9 +31,7 @@ describe('AdminProductService', () => {
       })
       .subscribe();
 
-    const request = httpTesting.expectOne(
-      (candidate) => candidate.url.endsWith('/admin/products'),
-    );
+    const request = httpTesting.expectOne((candidate) => candidate.url.endsWith('/admin/products'));
 
     expect(request.request.method).toBe('GET');
     expect(request.request.params.get('page')).toBe('2');
@@ -59,9 +54,7 @@ describe('AdminProductService', () => {
   it('omits inactive filters', () => {
     service.getProducts().subscribe();
 
-    const request = httpTesting.expectOne(
-      (candidate) => candidate.url.endsWith('/admin/products'),
-    );
+    const request = httpTesting.expectOne((candidate) => candidate.url.endsWith('/admin/products'));
 
     expect(request.request.params.get('search')).toBeNull();
     expect(request.request.params.get('category')).toBeNull();

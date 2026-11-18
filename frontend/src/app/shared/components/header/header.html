@@ -1,7 +1,14 @@
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" routerLink="/">
-      <img src="/alrayan-logo.png" alt="Al Rayan Palace" class="brand-logo" />
+    <a
+      class="brand"
+      routerLink="/"
+    >
+      <img
+        src="/alrayan-logo.png"
+        alt="Al Rayan Palace"
+        class="brand-logo"
+      />
 
       <span class="brand-name"> Al Rayan Palace </span>
     </a>
@@ -22,10 +29,21 @@
 
       @if (isAuthenticated()) {
         @if (!isManagePage()) {
-          <a class="admin-link" routerLink="/admin/products"> Manage </a>
+          <a
+            class="admin-link"
+            routerLink="/admin/products"
+          >
+            Manage
+          </a>
         }
 
-        <button type="button" class="admin-link logout-button" (click)="logout()">Logout</button>
+        <button
+          type="button"
+          class="admin-link logout-button"
+          (click)="logout()"
+        >
+          Logout
+        </button>
       } @else {
         <a
           href="https://www.instagram.com/alrayan_palacee/"
@@ -35,7 +53,12 @@
           Instagram
         </a>
 
-        <a class="admin-link" routerLink="/admin/login"> Admin </a>
+        <a
+          class="admin-link"
+          routerLink="/admin/login"
+        >
+          Admin
+        </a>
       }
     </nav>
   </div>

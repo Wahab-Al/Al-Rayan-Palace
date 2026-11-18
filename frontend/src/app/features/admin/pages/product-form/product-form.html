@@ -16,13 +16,23 @@
       </p>
     </div>
 
-    <a class="secondary-button" routerLink="/admin/products"> Back to Products </a>
+    <a
+      class="secondary-button"
+      routerLink="/admin/products"
+    >
+      Back to Products
+    </a>
   </div>
 
   @if (loading()) {
     <div class="state">Loading product...</div>
   } @else {
-    <form class="product-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <form
+      class="product-form"
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+      novalidate
+    >
       @if (error()) {
         <div class="error-box">
           {{ error() }}
@@ -40,7 +50,12 @@
           <div class="field">
             <label for="title"> Title </label>
 
-            <input id="title" type="text" formControlName="title" placeholder="Modern Sofa" />
+            <input
+              id="title"
+              type="text"
+              formControlName="title"
+              placeholder="Modern Sofa"
+            />
 
             @if (form.controls.title.invalid && form.controls.title.touched) {
               <small> Title is required and must be 120 characters or less. </small>
@@ -102,7 +117,10 @@
           </div>
 
           <label class="checkbox-field">
-            <input type="checkbox" formControlName="featured" />
+            <input
+              type="checkbox"
+              formControlName="featured"
+            />
 
             <span> Featured product </span>
           </label>
@@ -123,9 +141,16 @@
           @if (previewUrl()) {
             <div class="preview">
               @if (previewType() === 'image') {
-                <img [src]="previewUrl()!" alt="Product preview" />
+                <img
+                  [src]="previewUrl()!"
+                  alt="Product preview"
+                />
               } @else {
-                <video [src]="previewUrl()!" controls playsinline></video>
+                <video
+                  [src]="previewUrl()!"
+                  controls
+                  playsinline
+                ></video>
               }
             </div>
           }
@@ -133,9 +158,18 @@
       </div>
 
       <div class="form-actions">
-        <a class="secondary-button" routerLink="/admin/products"> Cancel </a>
+        <a
+          class="secondary-button"
+          routerLink="/admin/products"
+        >
+          Cancel
+        </a>
 
-        <button class="primary-button" type="submit" [disabled]="submitting()">
+        <button
+          class="primary-button"
+          type="submit"
+          [disabled]="submitting()"
+        >
           @if (submitting()) {
             Saving...
           } @else {

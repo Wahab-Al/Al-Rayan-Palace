@@ -19,17 +19,9 @@ router.get('/', getAdminProducts);
 
 router.get('/:id', getAdminProduct);
 
-router.post(
-  '/',
-  uploadMedia.single('media'),
-  createProduct,
-);
+router.post('/', uploadMedia.single('media'), createProduct);
 
-router.patch(
-  '/:id',
-  uploadMedia.single('media'),
-  updateProduct,
-);
+router.patch('/:id', uploadMedia.single('media'), updateProduct);
 
 router.delete('/:id', deleteProduct);
 

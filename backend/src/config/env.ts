@@ -13,19 +13,10 @@ function requireEnv(name: string): string {
   return value;
 }
 
+const jwtExpireSeconds = Number.parseInt(process.env.JWT_EXPIRE_SECONDS ?? '7200', 10);
 
-const jwtExpireSeconds = Number.parseInt(
-    process.env.JWT_EXPIRE_SECONDS ?? '7200',
-    10,
-  );
-
-  if (
-    !Number.isFinite(jwtExpireSeconds) ||
-    jwtExpireSeconds <= 0
-  ) {
-    console.error(
-      'Error: JWT_EXPIRE_SECONDS must be a positive number',
-    );
+if (!Number.isFinite(jwtExpireSeconds) || jwtExpireSeconds <= 0) {
+  console.error('Error: JWT_EXPIRE_SECONDS must be a positive number');
 
   process.exit(1);
 }
@@ -34,9 +25,7 @@ const config = {
   PORT: Number.parseInt(process.env.PORT ?? '5000', 10),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
 
-  FRONTEND_ORIGIN: requireEnv(
-    'FRONTEND_ORIGIN',
-  ),
+  FRONTEND_ORIGIN: requireEnv('FRONTEND_ORIGIN'),
 
   MONGO_URI: requireEnv('MONGO_URI'),
 

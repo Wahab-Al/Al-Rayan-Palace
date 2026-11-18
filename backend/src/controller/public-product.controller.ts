@@ -19,26 +19,20 @@ type ProductForMapping = {
 
 function mapProduct(product: ProductForMapping) {
   if (!product.createdAt || !product.updatedAt) {
-    throw new Error(
-      'Product timestamps are missing',
-    );
+    throw new Error('Product timestamps are missing');
   }
 
   return {
     id: product._id.toString(),
     title: product.title,
 
-    ...(product.description
-      ? { description: product.description }
-      : {}),
+    ...(product.description ? { description: product.description } : {}),
 
     category: product.category,
     mediaUrl: product.mediaUrl,
     mediaType: product.mediaType,
 
-    ...(product.mediaPublicId
-      ? { mediaPublicId: product.mediaPublicId }
-      : {}),
+    ...(product.mediaPublicId ? { mediaPublicId: product.mediaPublicId } : {}),
 
     featured: product.featured,
     ...(product.instagramUrl ? { instagramUrl: product.instagramUrl } : {}),
@@ -47,10 +41,7 @@ function mapProduct(product: ProductForMapping) {
   };
 }
 
-export const getPublicProduct: RequestHandler = async (
-  req,
-  res,
-) => {
+export const getPublicProduct: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 

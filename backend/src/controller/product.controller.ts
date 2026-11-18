@@ -8,10 +8,7 @@ import {
   type CloudinaryResourceType,
 } from '../services/cloudinary.service.js';
 
-function parseBoolean(
-  value: unknown,
-  fallback = false,
-): boolean {
+function parseBoolean(value: unknown, fallback = false): boolean {
   if (typeof value === 'boolean') {
     return value;
   }
@@ -107,7 +104,11 @@ export function buildAdminProductFilter(filters: {
     ];
     const normalizedSearch = search.toLowerCase();
 
-    if (normalizedSearch === 'featured' || normalizedSearch === 'true' || normalizedSearch === 'yes') {
+    if (
+      normalizedSearch === 'featured' ||
+      normalizedSearch === 'true' ||
+      normalizedSearch === 'yes'
+    ) {
       conditions.push({ featured: true });
     } else if (
       normalizedSearch === 'not featured' ||
@@ -123,10 +124,7 @@ export function buildAdminProductFilter(filters: {
   return filter;
 }
 
-function requireString(
-  value: unknown,
-  fieldName: string,
-): string {
+function requireString(value: unknown, fieldName: string): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error(`${fieldName} is required`);
   }
@@ -134,12 +132,8 @@ function requireString(
   return value.trim();
 }
 
-function getMediaType(
-  mimetype: string,
-): CloudinaryResourceType {
-  return mimetype.startsWith('video/')
-    ? 'video'
-    : 'image';
+function getMediaType(mimetype: string): CloudinaryResourceType {
+  return mimetype.startsWith('video/') ? 'video' : 'image';
 }
 
 type ProductForMapping = {
@@ -158,26 +152,20 @@ type ProductForMapping = {
 
 function mapProduct(product: ProductForMapping) {
   if (!product.createdAt || !product.updatedAt) {
-    throw new Error(
-      'Product timestamps are missing',
-    );
+    throw new Error('Product timestamps are missing');
   }
 
   return {
     id: product._id.toString(),
     title: product.title,
 
-    ...(product.description
-      ? { description: product.description }
-      : {}),
+    ...(product.description ? { description: product.description } : {}),
 
     category: product.category,
     mediaUrl: product.mediaUrl,
     mediaType: product.mediaType,
 
-    ...(product.mediaPublicId
-      ? { mediaPublicId: product.mediaPublicId }
-      : {}),
+    ...(product.mediaPublicId ? { mediaPublicId: product.mediaPublicId } : {}),
 
     featured: product.featured,
 
@@ -188,50 +176,24 @@ function mapProduct(product: ProductForMapping) {
   };
 }
 
-export const getAdminProducts: RequestHandler = async (
-  req,
-  res,
-) => {
+export const getAdminProducts: RequestHandler = async (req, res) => {
   try {
-    const category =
-      typeof req.query.category === 'string'
-        ? req.query.category
-        : 'all';
+    const category = typeof req.query.category === 'string' ? req.query.category : 'all';
 
-    const search =
-      typeof req.query.search === 'string'
-        ? req.query.search
-        : '';
+    const search = typeof req.query.search === 'string' ? req.query.search : '';
 
-    const mediaType =
-      typeof req.query.mediaType === 'string'
-        ? req.query.mediaType
-        : 'all';
+    const mediaType = typeof req.query.mediaType === 'string' ? req.query.mediaType : 'all';
 
-    const featured =
-      typeof req.query.featured === 'string'
-        ? req.query.featured
-        : 'all';
+    const featured = typeof req.query.featured === 'string' ? req.query.featured : 'all';
 
-    const parsedPage =
-      typeof req.query.page === 'string'
-        ? Number.parseInt(req.query.page, 10)
-        : 1;
+    const parsedPage = typeof req.query.page === 'string' ? Number.parseInt(req.query.page, 10) : 1;
 
     const parsedLimit =
-      typeof req.query.limit === 'string'
-        ? Number.parseInt(req.query.limit, 10)
-        : 20;
+      typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : 20;
 
-    const page =
-      Number.isFinite(parsedPage) && parsedPage > 0
-        ? parsedPage
-        : 1;
+    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-    const limit =
-      Number.isFinite(parsedLimit) && parsedLimit > 0
-        ? Math.min(parsedLimit, 20)
-        : 20;
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 20) : 20;
 
     const filter = buildAdminProductFilter({
       search,
@@ -264,10 +226,7 @@ export const getAdminProducts: RequestHandler = async (
   }
 };
 
-export const getAdminProduct: RequestHandler = async (
-  req,
-  res,
-) => {
+export const getAdminProduct: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -297,10 +256,7 @@ export const getAdminProduct: RequestHandler = async (
   }
 };
 
-export const createProduct: RequestHandler = async (
-  req,
-  res,
-) => {
+export const createProduct: RequestHandler = async (req, res) => {
   let uploadedMedia:
     | {
         publicId: string;
@@ -335,9 +291,7 @@ export const createProduct: RequestHandler = async (
       return;
     }
 
-    const description = cleanOptionalString(
-      req.body.description,
-    );
+    const description = cleanOptionalString(req.body.description);
 
     if (description && description.length > 1000) {
       res.status(400).json({
@@ -350,10 +304,7 @@ export const createProduct: RequestHandler = async (
 
     const mediaType = getMediaType(req.file.mimetype);
 
-    const uploaded = await uploadMedia(
-      req.file.buffer,
-      mediaType,
-    );
+    const uploaded = await uploadMedia(req.file.buffer, mediaType);
 
     uploadedMedia = {
       publicId: uploaded.publicId,
@@ -379,19 +330,13 @@ export const createProduct: RequestHandler = async (
   } catch (error) {
     if (uploadedMedia) {
       try {
-        await deleteMedia(
-          uploadedMedia.publicId,
-          uploadedMedia.resourceType,
-        );
+        await deleteMedia(uploadedMedia.publicId, uploadedMedia.resourceType);
       } catch {
         // ignore cleanup failure
       }
     }
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Server error';
+    const message = error instanceof Error ? error.message : 'Server error';
 
     if (
       message.includes('is required') ||
@@ -409,10 +354,7 @@ export const createProduct: RequestHandler = async (
   }
 };
 
-export const updateProduct: RequestHandler = async (
-  req,
-  res,
-) => {
+export const updateProduct: RequestHandler = async (req, res) => {
   let uploadedMedia:
     | {
         publicId: string;
@@ -441,31 +383,19 @@ export const updateProduct: RequestHandler = async (
 
     // Keep the old Cloudinary media information
     // BEFORE changing the product.
-    const oldMediaPublicId =
-      product.mediaPublicId;
+    const oldMediaPublicId = product.mediaPublicId;
 
-    const oldMediaType =
-      product.mediaType;
+    const oldMediaType = product.mediaType;
 
-    const title =
-      typeof req.body.title === 'string'
-        ? req.body.title.trim()
-        : product.title;
+    const title = typeof req.body.title === 'string' ? req.body.title.trim() : product.title;
 
     const category =
-      typeof req.body.category === 'string'
-        ? req.body.category.trim()
-        : product.category;
+      typeof req.body.category === 'string' ? req.body.category.trim() : product.category;
 
     const description =
-      typeof req.body.description === 'string'
-        ? req.body.description.trim()
-        : product.description;
+      typeof req.body.description === 'string' ? req.body.description.trim() : product.description;
 
-    const featured = parseBoolean(
-      req.body.featured,
-      product.featured,
-    );
+    const featured = parseBoolean(req.body.featured, product.featured);
 
     const instagramUrl =
       typeof req.body.instagramUrl === 'string'
@@ -507,57 +437,42 @@ export const updateProduct: RequestHandler = async (
       return;
     }
 
-    let nextMediaUrl =
-      product.mediaUrl;
+    let nextMediaUrl = product.mediaUrl;
 
-    let nextMediaType =
-      product.mediaType;
+    let nextMediaType = product.mediaType;
 
-    let nextMediaPublicId =
-      product.mediaPublicId;
+    let nextMediaPublicId = product.mediaPublicId;
 
     // Upload new media only when a new file was selected.
     if (req.file) {
-      const nextType =
-        getMediaType(req.file.mimetype);
+      const nextType = getMediaType(req.file.mimetype);
 
-      const uploaded =
-        await uploadMedia(
-          req.file.buffer,
-          nextType,
-        );
+      const uploaded = await uploadMedia(req.file.buffer, nextType);
 
       uploadedMedia = {
         publicId: uploaded.publicId,
         resourceType: uploaded.resourceType,
       };
 
-      nextMediaUrl =
-        uploaded.secureUrl;
+      nextMediaUrl = uploaded.secureUrl;
 
-      nextMediaType =
-        uploaded.resourceType;
+      nextMediaType = uploaded.resourceType;
 
-      nextMediaPublicId =
-        uploaded.publicId;
+      nextMediaPublicId = uploaded.publicId;
     }
 
     product.title = title;
     product.category = category;
-    product.description =
-      description || undefined;
+    product.description = description || undefined;
     product.featured = featured;
     product.set('instagramUrl', instagramUrl);
 
-    product.mediaUrl =
-      nextMediaUrl;
+    product.mediaUrl = nextMediaUrl;
 
-    product.mediaType =
-      nextMediaType;
+    product.mediaType = nextMediaType;
 
     if (nextMediaPublicId) {
-      product.mediaPublicId =
-        nextMediaPublicId;
+      product.mediaPublicId = nextMediaPublicId;
     }
 
     await product.save();
@@ -572,15 +487,9 @@ export const updateProduct: RequestHandler = async (
       oldMediaPublicId !== uploadedMedia.publicId
     ) {
       try {
-        await deleteMedia(
-          oldMediaPublicId,
-          oldMediaType,
-        );
+        await deleteMedia(oldMediaPublicId, oldMediaType);
       } catch (error) {
-        console.error(
-          'Failed to delete old Cloudinary media:',
-          error,
-        );
+        console.error('Failed to delete old Cloudinary media:', error);
       }
     }
 
@@ -592,22 +501,13 @@ export const updateProduct: RequestHandler = async (
     // remove the newly uploaded media to avoid an orphan.
     if (uploadedMedia) {
       try {
-        await deleteMedia(
-          uploadedMedia.publicId,
-          uploadedMedia.resourceType,
-        );
+        await deleteMedia(uploadedMedia.publicId, uploadedMedia.resourceType);
       } catch (cleanupError) {
-        console.error(
-          'Failed to clean up uploaded media:',
-          cleanupError,
-        );
+        console.error('Failed to clean up uploaded media:', cleanupError);
       }
     }
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Server error';
+    const message = error instanceof Error ? error.message : 'Server error';
 
     if (message.includes('Instagram reference')) {
       res.status(400).json({ message });
@@ -619,10 +519,7 @@ export const updateProduct: RequestHandler = async (
     });
   }
 };
-export const deleteProduct: RequestHandler = async (
-  req,
-  res,
-) => {
+export const deleteProduct: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -646,10 +543,7 @@ export const deleteProduct: RequestHandler = async (
 
     if (product.mediaPublicId) {
       try {
-        await deleteMedia(
-          product.mediaPublicId,
-          product.mediaType,
-        );
+        await deleteMedia(product.mediaPublicId, product.mediaType);
       } catch {
         // ignore Cloudinary cleanup failure
       }

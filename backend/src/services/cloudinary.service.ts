@@ -30,9 +30,7 @@ export async function uploadMedia(
         resolve({
           publicId: result.public_id,
           secureUrl: result.secure_url,
-          resourceType: result.resource_type === 'video'
-            ? 'video'
-            : 'image',
+          resourceType: result.resource_type === 'video' ? 'video' : 'image',
         });
       },
     );

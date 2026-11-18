@@ -3,24 +3,14 @@ import type { RequestHandler } from 'express';
 
 import config from '../config/env.js';
 
-import {
-  ADMIN_COOKIE_NAME,
-  createAdminToken,
-} from '../services/auth.service.js';
+import { ADMIN_COOKIE_NAME, createAdminToken } from '../services/auth.service.js';
 
-export const loginAdmin: RequestHandler = async (
-  req,
-  res,
-) => {
+export const loginAdmin: RequestHandler = async (req, res) => {
   const { username, password } = req.body;
 
-  if (
-    typeof username !== 'string' ||
-    typeof password !== 'string'
-  ) {
+  if (typeof username !== 'string' || typeof password !== 'string') {
     res.status(400).json({
-      message:
-        'Username and password are required',
+      message: 'Username and password are required',
     });
 
     return;
@@ -34,11 +24,7 @@ export const loginAdmin: RequestHandler = async (
     return;
   }
 
-  const passwordMatches =
-    await bcrypt.compare(
-      password,
-      config.ADMIN_PASSWORD_HASH,
-    );
+  const passwordMatches = await bcrypt.compare(password, config.ADMIN_PASSWORD_HASH);
 
   if (!passwordMatches) {
     res.status(401).json({
@@ -48,22 +34,15 @@ export const loginAdmin: RequestHandler = async (
     return;
   }
 
-  const token = createAdminToken(
-    config.ADMIN_USERNAME,
-  );
+  const token = createAdminToken(config.ADMIN_USERNAME);
 
-  res.cookie(
-    ADMIN_COOKIE_NAME,
-    token,
-    {
-      httpOnly: true,
-      secure:
-        config.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: config.JWT_EXPIRE_SECONDS * 1000,
-      path: '/',
-    },
-  );
+  res.cookie(ADMIN_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: config.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: config.JWT_EXPIRE_SECONDS * 1000,
+    path: '/',
+  });
 
   res.json({
     user: {

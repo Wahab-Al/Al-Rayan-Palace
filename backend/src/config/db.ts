@@ -16,10 +16,10 @@
 // }
 
 import mongoose from 'mongoose';
-import dns from "node:dns";
+import dns from 'node:dns';
 
 export default async function connectDB(uri: string): Promise<void> {
-  dns.setServers(["8.8.8.8"]);
+  dns.setServers(['8.8.8.8']);
   await mongoose.connect(uri, { family: 4 });
 
   console.log('MongoDB connected');
