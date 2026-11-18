@@ -1,0 +1,54 @@
+<section class="product-detail">
+  <a class="back-link" routerLink="/"> ← Back to catalog </a>
+
+  @if (loading()) {
+    <div class="state">Loading product...</div>
+  }
+
+  @if (error()) {
+    <div class="error-box">
+      {{ error() }}
+    </div>
+  }
+
+  @if (product(); as item) {
+    <div class="detail-grid">
+      <div class="media-wrapper">
+        @if (item.mediaType === 'image') {
+          <img [src]="item.mediaUrl" [alt]="item.title" />
+        } @else {
+          <video [src]="item.mediaUrl" controls playsinline></video>
+        }
+      </div>
+
+      <div class="content">
+        @if (item.featured) {
+          <span class="featured"> Featured </span>
+        }
+
+        <span class="category">
+          {{ item.category }}
+        </span>
+
+        <h1>
+          {{ item.title }}
+        </h1>
+
+        @if (item.description) {
+          <p class="description">
+            {{ item.description }}
+          </p>
+        }
+
+        <a
+          class="contact-button"
+          [href]="item.instagramUrl || 'https://www.instagram.com/alrayan_palacee/'"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ item.instagramUrl ? 'View product on Instagram' : 'Contact us on Instagram' }}
+        </a>
+      </div>
+    </div>
+  }
+</section>

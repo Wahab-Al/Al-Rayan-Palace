@@ -1,0 +1,61 @@
+<section class="login-page">
+  <div class="login-card">
+    <div class="login-brand">
+      <img src="/alrayan-logo.png" alt="Al Rayan Palace" />
+
+      <!-- <span>
+        Al Rayan Palace
+      </span> -->
+    </div>
+
+    <p class="eyebrow">ADMIN</p>
+
+    <h1>Welcome back</h1>
+
+    <!-- <p class="subtitle">
+      Sign in to manage your catalog.
+    </p> -->
+
+    @if (error()) {
+      <div class="error-box">
+        {{ error() }}
+      </div>
+    }
+
+    <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label for="username"> Username </label>
+
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          autocomplete="username"
+          placeholder="Enter your username"
+        />
+      </div>
+
+      <div class="field">
+        <label for="password"> Password </label>
+
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+        />
+      </div>
+
+      <button type="submit" [disabled]="loading()">
+        @if (loading()) {
+          Signing in...
+        } @else {
+          Sign in
+        }
+      </button>
+    </form>
+
+    <button type="button" class="back-home" (click)="goHome()">← Back to store</button>
+  </div>
+</section>

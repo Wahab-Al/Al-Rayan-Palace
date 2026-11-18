@@ -1,0 +1,58 @@
+<section class="categories-section">
+  <div class="section-heading">
+    <p class="eyebrow">Explore</p>
+
+    <h2>Shop by category</h2>
+
+    <p>Discover our furniture collections.</p>
+  </div>
+
+  <div class="category-list">
+    <button
+      type="button"
+      class="category-item"
+      [class.active]="selectedCategory() === 'all'"
+      (click)="selectCategory('all')"
+    >
+      <div class="category-circle">
+        @if (allPreview()) {
+          @if (allPreview()!.mediaType === 'image') {
+            <img [src]="allPreview()!.mediaUrl" alt="All products" />
+          } @else {
+            <video [src]="allPreview()!.mediaUrl" muted autoplay loop playsinline></video>
+          }
+        }
+      </div>
+
+      <span class="category-name"> All </span>
+    </button>
+
+    @for (category of categories(); track category.name) {
+      <button
+        type="button"
+        class="category-item"
+        [class.active]="selectedCategory() === category.name"
+        (click)="selectCategory(category.name)"
+      >
+        <div class="category-circle">
+          @if (category.mediaType === 'image') {
+            <img [src]="category.mediaUrl" [alt]="category.name" loading="lazy" />
+          } @else {
+            <video
+              [src]="category.mediaUrl"
+              muted
+              autoplay
+              loop
+              playsinline
+              preload="metadata"
+            ></video>
+          }
+        </div>
+
+        <span class="category-name">
+          {{ category.name }}
+        </span>
+      </button>
+    }
+  </div>
+</section>

@@ -1,0 +1,148 @@
+<section class="product-form-page">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Administration</p>
+
+      <h1>
+        {{ isEdit() ? 'Edit Product' : 'Add Product' }}
+      </h1>
+
+      <p class="subtitle">
+        {{
+          isEdit()
+            ? 'Update product information and media.'
+            : 'Create a new product for the catalog.'
+        }}
+      </p>
+    </div>
+
+    <a class="secondary-button" routerLink="/admin/products"> Back to Products </a>
+  </div>
+
+  @if (loading()) {
+    <div class="state">Loading product...</div>
+  } @else {
+    <form class="product-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (error()) {
+        <div class="error-box">
+          {{ error() }}
+        </div>
+      }
+
+      @if (success()) {
+        <div class="success-box">
+          {{ success() }}
+        </div>
+      }
+
+      <div class="form-grid">
+        <div class="form-fields">
+          <div class="field">
+            <label for="title"> Title </label>
+
+            <input id="title" type="text" formControlName="title" placeholder="Modern Sofa" />
+
+            @if (form.controls.title.invalid && form.controls.title.touched) {
+              <small> Title is required and must be 120 characters or less. </small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="category"> Category </label>
+
+            <input
+              id="category"
+              type="text"
+              formControlName="category"
+              list="category-options"
+              placeholder="Sofas"
+            />
+
+            <datalist id="category-options">
+              @for (category of categories(); track category) {
+                <option [value]="category"></option>
+              }
+            </datalist>
+
+            @if (form.controls.category.invalid && form.controls.category.touched) {
+              <small> Category is required and must be 80 characters or less. </small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="instagramUrl">Instagram reference URL (optional)</label>
+            <input
+              id="instagramUrl"
+              type="url"
+              formControlName="instagramUrl"
+              maxlength="2048"
+              placeholder="https://www.instagram.com/p/..."
+            />
+
+            <p class="hint">Paste the Instagram post or reel that features this product.</p>
+
+            @if (form.controls.instagramUrl.invalid && form.controls.instagramUrl.touched) {
+              <small>Enter a valid HTTPS Instagram URL.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="description"> Description </label>
+
+            <textarea
+              id="description"
+              formControlName="description"
+              rows="7"
+              placeholder="Describe this furniture piece..."
+            ></textarea>
+
+            @if (form.controls.description.invalid && form.controls.description.touched) {
+              <small> Description must be 1000 characters or less. </small>
+            }
+          </div>
+
+          <label class="checkbox-field">
+            <input type="checkbox" formControlName="featured" />
+
+            <span> Featured product </span>
+          </label>
+        </div>
+
+        <div class="media-section">
+          <label for="media"> Product media </label>
+
+          <input
+            id="media"
+            type="file"
+            accept="image/*,video/*"
+            (change)="onFileSelected($event)"
+          />
+
+          <p class="hint">JPG, PNG, WEBP, GIF, AVIF, MP4, WEBM or MOV. Maximum 50MB.</p>
+
+          @if (previewUrl()) {
+            <div class="preview">
+              @if (previewType() === 'image') {
+                <img [src]="previewUrl()!" alt="Product preview" />
+              } @else {
+                <video [src]="previewUrl()!" controls playsinline></video>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a class="secondary-button" routerLink="/admin/products"> Cancel </a>
+
+        <button class="primary-button" type="submit" [disabled]="submitting()">
+          @if (submitting()) {
+            Saving...
+          } @else {
+            {{ isEdit() ? 'Update Product' : 'Create Product' }}
+          }
+        </button>
+      </div>
+    </form>
+  }
+</section>

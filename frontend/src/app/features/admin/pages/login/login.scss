@@ -1,0 +1,109 @@
+:host {
+  display: block;
+}
+
+.login-page {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 4rem 1.25rem;
+}
+
+.login-card {
+  width: min(100%, 440px);
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.eyebrow {
+  margin: 0 0 0.4rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.2rem;
+}
+
+.subtitle {
+  margin: 0.5rem 0 1.5rem;
+  color: var(--color-muted);
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font: inherit;
+}
+
+button {
+  min-height: 46px;
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-box {
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #e7b8b8;
+  border-radius: var(--radius-md);
+  background: #fff4f4;
+  color: #9d2f2f;
+}
+
+.back-home {
+  display: block;
+  width: 100%;
+
+  margin-top: 1.5rem;
+
+  border: 0;
+  background: transparent;
+
+  color: var(--color-muted);
+
+  text-align: center;
+
+  font: inherit;
+  font-size: 0.85rem;
+
+  cursor: pointer;
+}
+
+.back-home:hover {
+  color: var(--color-text);
+}

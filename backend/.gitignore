@@ -1,0 +1,13 @@
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/.angular/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+# Sensitive local files
+**/cookies.txt

@@ -1,0 +1,52 @@
+<app-hero />
+<section class="featured-section">
+  <div class="container">
+    <div class="section-heading">
+      <p class="eyebrow">CURATED FOR YOU</p>
+
+      <h2>Featured Products</h2>
+    </div>
+
+    <div class="featured-grid">
+      @for (product of featuredProducts(); track product.id) {
+        <app-product-card [product]="product" />
+      }
+    </div>
+  </div>
+</section>
+<app-category-filter
+  [categories]="categories()"
+  [allPreview]="allPreview()"
+  [selectedCategory]="selectedCategory()"
+  (categoryChange)="onCategoryChange($event)"
+/>
+
+<section class="products-section">
+  <div class="container">
+    <h2>Our Products</h2>
+
+    @if (loading()) {
+      <p>Loading products...</p>
+    }
+
+    @if (error()) {
+      <p>{{ error() }}</p>
+    }
+
+    @if (!loading() && !error()) {
+      <div class="products-grid">
+        @for (product of products(); track product.id) {
+          <app-product-card [product]="product" />
+        } @empty {
+          <p class="empty-state">No products found.</p>
+        }
+      </div>
+
+      <app-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages()"
+        (pageChange)="changePage($event)"
+      />
+    }
+  </div>
+</section>

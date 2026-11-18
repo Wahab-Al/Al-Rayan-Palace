@@ -1,0 +1,28 @@
+<section class="dashboard">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">Administration</p>
+
+      <h1>Dashboard</h1>
+
+      @if (user(); as currentUser) {
+        <p class="welcome">
+          Welcome,
+          <strong>
+            {{ currentUser.username }}
+          </strong>
+        </p>
+      }
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <a class="dashboard-card" routerLink="/admin/products">
+      <span class="card-label"> Catalog </span>
+
+      <h2>Manage Products</h2>
+
+      <p>Add, edit and delete furniture products.</p>
+    </a>
+  </div>
+</section>
