@@ -10,6 +10,7 @@ import type { ProductListResponse } from '../../models/product-list-response';
 describe('Home', () => {
   let component: Home;
   let fixture: ComponentFixture<Home>;
+  let getProducts: ReturnType<typeof vi.fn>;
 
   const response: ProductListResponse = {
     items: [],
@@ -22,12 +23,13 @@ describe('Home', () => {
   };
 
   beforeEach(async () => {
+    getProducts = vi.fn(() => of(response));
     await TestBed.configureTestingModule({
       imports: [Home],
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { queryParams: of({}) } },
-        { provide: ProductService, useValue: { getProducts: vi.fn(() => of(response)) } },
+        { provide: ProductService, useValue: { getProducts } },
       ],
     }).compileComponents();
 
@@ -40,5 +42,6 @@ describe('Home', () => {
     expect(component).toBeTruthy();
     expect(component.products()).toEqual([]);
     expect(component.totalPages()).toBe(1);
+    expect(getProducts).toHaveBeenCalledWith(1, 12, 'all');
   });
 });

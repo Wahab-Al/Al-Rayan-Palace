@@ -50,7 +50,16 @@ export class ThemeService {
   }
 
   private applyTheme(theme: ThemeMode): void {
-    this.document.documentElement.dataset['theme'] = theme;
-    this.document.documentElement.style.colorScheme = theme;
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const root = this.document.documentElement;
+    if (!root?.dataset || !root.style) {
+      return;
+    }
+
+    root.dataset['theme'] = theme;
+    root.style.colorScheme = theme;
   }
 }

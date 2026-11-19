@@ -5,6 +5,7 @@ export interface Product {
   category: string;
   mediaUrl: string;
   mediaType: 'image' | 'video';
+  images?: string[];
   mediaPublicId?: string;
   featured: boolean;
   instagramUrl?: string;

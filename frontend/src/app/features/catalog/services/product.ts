@@ -12,7 +12,7 @@ import type { ProductListResponse } from '../models/product-list-response';
 export class ProductService {
   private readonly http = inject(HttpClient);
 
-  private readonly apiUrl = `${APP_CONFIG.apiBaseUrl}/products`;
+  private readonly apiUrl = `${inject(APP_CONFIG).apiBaseUrl}/products`;
 
   getProducts(
     page = 1,

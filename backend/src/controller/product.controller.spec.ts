@@ -1,7 +1,33 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildAdminProductFilter, createProduct, parseInstagramUrl } from './product.controller.js';
+import {
+  buildAdminProductFilter,
+  createProduct,
+  parseInstagramUrl,
+  validateMediaSelection,
+} from './product.controller.js';
+
+test('allows one to three images or a single video for product media', () => {
+  assert.equal(validateMediaSelection([{ mimetype: 'image/jpeg' }]), null);
+  assert.equal(
+    validateMediaSelection([
+      { mimetype: 'image/jpeg' },
+      { mimetype: 'image/png' },
+      { mimetype: 'image/webp' },
+    ]),
+    null,
+  );
+  assert.equal(validateMediaSelection([{ mimetype: 'video/mp4' }]), null);
+  assert.match(
+    validateMediaSelection([{ mimetype: 'video/mp4' }, { mimetype: 'video/webm' }]) ?? '',
+    /one video/,
+  );
+  assert.match(
+    validateMediaSelection([{ mimetype: 'image/jpeg' }, { mimetype: 'video/mp4' }]) ?? '',
+    /one video/,
+  );
+});
 
 test('builds product filters for search, category, media type, and featured status', () => {
   const filter = buildAdminProductFilter({

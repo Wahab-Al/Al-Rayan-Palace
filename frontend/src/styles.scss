@@ -228,6 +228,10 @@ video {
   color: #171717;
 }
 
+:root[data-theme='dark'] .contact-button:hover {
+  color: #fff;
+}
+
 :root[data-theme='dark'] .badge {
   background: var(--color-accent-soft);
   color: var(--color-text);
@@ -256,7 +260,7 @@ video {
   color: var(--color-text);
   border-color: var(--color-border);
 }
-:root[data-theme='dark'] .login-card button,
+:root[data-theme='dark'] .login-card form button[type='submit'],
 :root[data-theme='dark'] .pagination button.active,
 :root[data-theme='dark'] .category-item.active {
   color: #171717;
@@ -278,8 +282,3 @@ video {
   background: #765e3c;
   color: #fff;
 }
-
-
-
-
-

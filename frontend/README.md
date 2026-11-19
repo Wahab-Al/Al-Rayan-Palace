@@ -32,8 +32,20 @@ ng test
 
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+Install the Playwright Chromium browser once on each development machine:
 
 ```bash
-ng e2e
+npm exec playwright install chromium
+```
+
+Run the end-to-end suite:
+
+```bash
+npm run test:e2e
+```
+
+Playwright starts the Angular development server automatically. The tests mock API responses, so they do not require the backend or a database. To open the Playwright UI instead, run:
+
+```bash
+npm run test:e2e:ui
 ```

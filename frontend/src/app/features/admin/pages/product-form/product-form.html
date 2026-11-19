@@ -133,24 +133,36 @@
             id="media"
             type="file"
             accept="image/*,video/*"
+            multiple
             (change)="onFileSelected($event)"
           />
 
-          <p class="hint">JPG, PNG, WEBP, GIF, AVIF, MP4, WEBM or MOV. Maximum 50MB.</p>
+          <p class="hint">
+            Choose 1–3 images across one or more selections, or choose one video. Each file can be
+            up to 25MB.
+          </p>
+          @if (selectedFiles().length) {
+            <p class="hint">{{ selectedFiles().length }} media file(s) selected.</p>
+          }
 
-          @if (previewUrl()) {
-            <div class="preview">
-              @if (previewType() === 'image') {
-                <img
-                  [src]="previewUrl()!"
-                  alt="Product preview"
-                />
-              } @else {
-                <video
-                  [src]="previewUrl()!"
-                  controls
-                  playsinline
-                ></video>
+          @if (previewUrls().length) {
+            <div
+              class="preview-list"
+              [class.gallery-preview]="previewType() === 'image'"
+            >
+              @for (previewUrl of previewUrls(); track previewUrl) {
+                @if (previewType() === 'image') {
+                  <img
+                    [src]="previewUrl"
+                    alt="Product image preview"
+                  />
+                } @else {
+                  <video
+                    [src]="previewUrl"
+                    controls
+                    playsinline
+                  ></video>
+                }
               }
             </div>
           }

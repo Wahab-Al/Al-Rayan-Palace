@@ -20,13 +20,58 @@
     <div class="detail-grid">
       <div class="media-wrapper">
         @if (item.mediaType === 'image') {
-          <img
-            [src]="item.mediaUrl"
-            [alt]="item.title"
-          />
+          @if (item.images && item.images.length > 1) {
+            <div
+              class="image-gallery"
+              [class.two-images]="item.images.length === 2"
+            >
+              <div class="gallery-main">
+                <img
+                  [src]="item.images[activeImageIndex()]"
+                  [alt]="item.title"
+                />
+              </div>
+              <div
+                class="gallery-thumbnails"
+                aria-label="Product images"
+                [class.single-thumbnail]="item.images.length === 2"
+              >
+                @for (image of item.images; track image; let index = $index) {
+                  @if (activeImageIndex() !== index) {
+                    <button
+                      type="button"
+                      class="gallery-thumbnail"
+                      [attr.aria-label]="'Show product image ' + (index + 1)"
+                      (click)="selectImage(index)"
+                    >
+                      <img
+                        [src]="image"
+                        [alt]="item.title + ' image ' + (index + 1)"
+                      />
+                      @if (item.images.length === 3) {
+                        <span
+                          class="thumbnail-hint"
+                          aria-hidden="true"
+                          >Click me</span
+                        >
+                      }
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          } @else {
+            <img
+              [src]="item.images?.[0] || item.mediaUrl"
+              [alt]="item.title"
+            />
+          }
         } @else {
           <video
             [src]="item.mediaUrl"
+            autoplay
+            muted
+            loop
             controls
             playsinline
           ></video>
@@ -52,14 +97,44 @@
           </p>
         }
 
-        <a
-          class="contact-button"
-          [href]="item.instagramUrl || 'https://www.instagram.com/alrayan_palacee/'"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ item.instagramUrl ? 'View product on Instagram' : 'Contact us on Instagram' }}
-        </a>
+        @if (item.instagramUrl) {
+          <a
+            class="contact-button"
+            [href]="item.instagramUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View Product on Instagram
+          </a>
+        } @else {
+          <div class="contact-actions">
+            <a
+              class="contact-button"
+              href="https://www.instagram.com/alrayan_palacee/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Contact us on Instagram
+            </a>
+            <button
+              class="copy-product-link"
+              type="button"
+              (click)="copyProductLink()"
+            >
+              {{ linkCopied() ? 'Link copied' : 'Copy product link' }}
+            </button>
+          </div>
+          <p
+            class="copy-link-hint"
+            aria-live="polite"
+          >
+            {{
+              linkCopied()
+                ? 'Paste the link into your Instagram chat.'
+                : 'Copy the link to ask us about this product in chat.'
+            }}
+          </p>
+        }
       </div>
     </div>
   }

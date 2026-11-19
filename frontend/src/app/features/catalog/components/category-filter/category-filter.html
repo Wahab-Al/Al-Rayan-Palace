@@ -25,9 +25,8 @@
             <video
               [src]="allPreview()!.mediaUrl"
               muted
-              autoplay
-              loop
               playsinline
+              preload="none"
             ></video>
           }
         }
@@ -54,10 +53,8 @@
             <video
               [src]="category.mediaUrl"
               muted
-              autoplay
-              loop
               playsinline
-              preload="metadata"
+              preload="none"
             ></video>
           }
         </div>

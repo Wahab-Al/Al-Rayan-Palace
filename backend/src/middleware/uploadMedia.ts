@@ -1,6 +1,6 @@
 import multer from 'multer';
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 const allowedMimeTypes = new Set([
   'image/jpeg',
@@ -18,6 +18,7 @@ export const uploadMedia = multer({
 
   limits: {
     fileSize: MAX_FILE_SIZE,
+    files: 3,
   },
 
   fileFilter: (_req, file, callback) => {

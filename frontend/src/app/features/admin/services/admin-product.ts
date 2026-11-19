@@ -21,7 +21,7 @@ export interface AdminProductFilters {
 })
 export class AdminProductService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = APP_CONFIG.apiBaseUrl + '/admin/products';
+  private readonly apiUrl = inject(APP_CONFIG).apiBaseUrl + '/admin/products';
 
   getProducts(
     page = 1,

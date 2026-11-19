@@ -11,6 +11,7 @@ type ProductForMapping = {
   mediaUrl: string;
   mediaType: 'image' | 'video';
   mediaPublicId?: string;
+  gallery?: { url: string; publicId: string }[];
   featured: boolean;
   instagramUrl?: string;
   createdAt?: Date;
@@ -33,6 +34,13 @@ function mapProduct(product: ProductForMapping) {
     mediaType: product.mediaType,
 
     ...(product.mediaPublicId ? { mediaPublicId: product.mediaPublicId } : {}),
+    ...(product.mediaType === 'image'
+      ? {
+          images: product.gallery?.length
+            ? product.gallery.map((image) => image.url)
+            : [product.mediaUrl],
+        }
+      : {}),
 
     featured: product.featured,
     ...(product.instagramUrl ? { instagramUrl: product.instagramUrl } : {}),
@@ -43,6 +51,7 @@ function mapProduct(product: ProductForMapping) {
 
 export const getPublicProduct: RequestHandler = async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store');
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {

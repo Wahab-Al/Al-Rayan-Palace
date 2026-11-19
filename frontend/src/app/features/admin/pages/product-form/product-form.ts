@@ -6,6 +6,23 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AdminProductService } from '../../services/admin-product';
 
+export function mergeMediaFiles(current: File[], added: File[]): File[] {
+  const merged = [...current];
+  const keys = new Set(
+    current.map((file) => `${file.name}:${file.size}:${file.lastModified}:${file.type}`),
+  );
+
+  for (const file of added) {
+    const key = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+    if (!keys.has(key)) {
+      merged.push(file);
+      keys.add(key);
+    }
+  }
+
+  return merged;
+}
+
 @Component({
   selector: 'app-admin-product-form',
   imports: [ReactiveFormsModule, RouterLink],
@@ -31,9 +48,9 @@ export class ProductForm implements OnInit, OnDestroy {
 
   readonly categories = signal<string[]>([]);
 
-  readonly selectedFile = signal<File | null>(null);
+  readonly selectedFiles = signal<File[]>([]);
 
-  readonly previewUrl = signal<string | null>(null);
+  readonly previewUrls = signal<string[]>([]);
 
   readonly previewType = signal<'image' | 'video' | null>(null);
 
@@ -104,7 +121,11 @@ export class ProductForm implements OnInit, OnDestroy {
           instagramUrl: product.instagramUrl ?? '',
         });
 
-        this.previewUrl.set(product.mediaUrl);
+        this.previewUrls.set(
+          product.mediaType === 'image' && product.images?.length
+            ? product.images
+            : [product.mediaUrl],
+        );
 
         this.previewType.set(product.mediaType);
 
@@ -124,44 +145,40 @@ export class ProductForm implements OnInit, OnDestroy {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
 
-    const file = input.files?.[0];
-
-    if (!file) {
+    const addedFiles = Array.from(input.files ?? []);
+    if (addedFiles.length === 0) {
       return;
     }
 
     this.error.set(null);
     this.success.set(null);
 
-    const allowed = file.type.startsWith('image/') || file.type.startsWith('video/');
-
-    if (!allowed) {
+    const files = mergeMediaFiles(this.selectedFiles(), addedFiles);
+    const areImages = files.every((file) => file.type.startsWith('image/'));
+    const isSingleVideo = files.length === 1 && files[0].type.startsWith('video/');
+    if ((!areImages && !isSingleVideo) || (areImages && files.length > 3)) {
       input.value = '';
 
-      this.selectedFile.set(null);
-      this.error.set('Please select an image or video.');
+      this.error.set('Choose 1 to 3 images, or choose a single video. Do not mix media types.');
 
       return;
     }
 
-    const maxSize = 50 * 1024 * 1024;
+    const maxSize = 25 * 1024 * 1024;
 
-    if (file.size > maxSize) {
+    if (files.some((file) => file.size > maxSize)) {
       input.value = '';
 
-      this.selectedFile.set(null);
-      this.error.set('Maximum file size is 50MB.');
+      this.error.set('Each file must be 25MB or smaller.');
 
       return;
     }
 
     this.revokePreview();
 
-    this.selectedFile.set(file);
-
-    this.previewUrl.set(URL.createObjectURL(file));
-
-    this.previewType.set(file.type.startsWith('video/') ? 'video' : 'image');
+    this.selectedFiles.set(files);
+    this.previewUrls.set(files.map((file) => URL.createObjectURL(file)));
+    this.previewType.set(isSingleVideo ? 'video' : 'image');
   }
 
   submit(): void {
@@ -173,8 +190,8 @@ export class ProductForm implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isEdit() && !this.selectedFile()) {
-      this.error.set('Please select an image or video.');
+    if (!this.isEdit() && this.selectedFiles().length === 0) {
+      this.error.set('Please select 1 to 3 images or one video.');
 
       return;
     }
@@ -190,9 +207,7 @@ export class ProductForm implements OnInit, OnDestroy {
     formData.append('featured', String(this.form.controls.featured.value));
     formData.append('instagramUrl', this.form.controls.instagramUrl.value.trim());
 
-    const file = this.selectedFile();
-
-    if (file) {
+    for (const file of this.selectedFiles()) {
       formData.append('media', file, file.name);
     }
 
@@ -212,7 +227,7 @@ export class ProductForm implements OnInit, OnDestroy {
         );
 
         setTimeout(() => {
-          this.router.navigate(['/admin/products']);
+          this.router.navigateByUrl('/');
         }, 500);
       },
 
@@ -225,12 +240,8 @@ export class ProductForm implements OnInit, OnDestroy {
   }
 
   private revokePreview(): void {
-    const url = this.previewUrl();
-
-    const file = this.selectedFile();
-
-    if (url && file) {
-      URL.revokeObjectURL(url);
+    for (const url of this.previewUrls()) {
+      if (url.startsWith('blob:')) URL.revokeObjectURL(url);
     }
   }
 }

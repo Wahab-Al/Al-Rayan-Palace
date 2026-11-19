@@ -29,7 +29,7 @@ interface MeResponse {
 export class AuthService {
   private readonly http = inject(HttpClient);
 
-  private readonly apiUrl = `${APP_CONFIG.apiBaseUrl}/auth`;
+  private readonly apiUrl = `${inject(APP_CONFIG).apiBaseUrl}/auth`;
 
   readonly user = signal<AuthUser | null>(null);
 

@@ -7,7 +7,7 @@
     <div class="product-media">
       @if (product().mediaType === 'image') {
         <img
-          [src]="product().mediaUrl"
+          [src]="product().images?.[0] || product().mediaUrl"
           [alt]="product().title"
           loading="lazy"
           decoding="async"
@@ -19,7 +19,8 @@
           autoplay
           loop
           playsinline
-          preload="metadata"
+          controls
+          preload="none"
         ></video>
       }
 

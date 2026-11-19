@@ -39,4 +39,18 @@ describe('ProductCard', () => {
       '/products/product-1',
     );
   });
+
+  it('autoplays product videos muted so browsers allow playback', () => {
+    fixture.componentRef.setInput('product', {
+      ...product,
+      mediaType: 'video',
+      mediaUrl: 'https://example.com/sofa.mp4',
+    });
+    fixture.detectChanges();
+
+    const video = (fixture.nativeElement as HTMLElement).querySelector('video');
+    expect(video?.hasAttribute('autoplay')).toBe(true);
+    expect(video?.hasAttribute('muted')).toBe(true);
+    expect(video?.hasAttribute('loop')).toBe(true);
+  });
 });

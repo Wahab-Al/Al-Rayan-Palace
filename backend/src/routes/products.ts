@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store');
     const category = typeof req.query.category === 'string' ? req.query.category : 'all';
 
     const featured = typeof req.query.featured === 'string' ? req.query.featured : 'all';
@@ -14,11 +15,11 @@ router.get('/', async (req, res) => {
     const parsedPage = typeof req.query.page === 'string' ? Number.parseInt(req.query.page, 10) : 1;
 
     const parsedLimit =
-      typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : 10;
+      typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : 12;
 
     const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 10) : 10;
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 12) : 12;
 
     const filter: Record<string, unknown> = {};
 
@@ -41,45 +42,32 @@ router.get('/', async (req, res) => {
       .limit(limit)
       .lean();
 
-    const categories = await Product.distinct('category');
+    const [previewData] = await Product.aggregate<{
+      categoryPreviews: Array<{ name: string; mediaUrl: string; mediaType: 'image' | 'video' }>;
+      allPreview: { mediaUrl: string; mediaType: 'image' | 'video' }[];
+    }>([
+      { $sort: { featured: -1, createdAt: -1 } },
+      {
+        $facet: {
+          categoryPreviews: [
+            {
+              $group: {
+                _id: '$category',
+                mediaUrl: { $first: '$mediaUrl' },
+                mediaType: { $first: '$mediaType' },
+              },
+            },
+            { $sort: { _id: 1 } },
+            { $project: { _id: 0, name: '$_id', mediaUrl: 1, mediaType: 1 } },
+          ],
+          allPreview: [{ $limit: 1 }, { $project: { _id: 0, mediaUrl: 1, mediaType: 1 } }],
+        },
+      },
+    ]);
 
-    const categoryPreviews = await Promise.all(
-      categories.map(async (categoryName) => {
-        const product = await Product.findOne({
-          category: categoryName,
-        })
-          .sort({
-            featured: -1,
-            createdAt: -1,
-          })
-          .select({
-            mediaUrl: 1,
-            mediaType: 1,
-          })
-          .lean();
-
-        if (!product) {
-          return null;
-        }
-
-        return {
-          name: categoryName,
-          mediaUrl: product.mediaUrl,
-          mediaType: product.mediaType,
-        };
-      }),
-    );
-
-    const allPreview = await Product.findOne()
-      .sort({
-        featured: -1,
-        createdAt: -1,
-      })
-      .select({
-        mediaUrl: 1,
-        mediaType: 1,
-      })
-      .lean();
+    const categoryPreviews = previewData?.categoryPreviews ?? [];
+    const categories = categoryPreviews.map((preview) => preview.name);
+    const allPreview = previewData?.allPreview[0] ?? null;
 
     res.json({
       items: items.map((product) => ({
@@ -93,6 +81,13 @@ router.get('/', async (req, res) => {
         mediaType: product.mediaType,
 
         ...(product.mediaPublicId ? { mediaPublicId: product.mediaPublicId } : {}),
+        ...(product.mediaType === 'image'
+          ? {
+              images: product.gallery?.length
+                ? product.gallery.map((image) => image.url)
+                : [product.mediaUrl],
+            }
+          : {}),
 
         featured: product.featured,
         createdAt: product.createdAt,
@@ -105,9 +100,7 @@ router.get('/', async (req, res) => {
 
       categories: categories.sort(),
 
-      categoryPreviews: categoryPreviews.filter(
-        (item): item is NonNullable<typeof item> => item !== null,
-      ),
+      categoryPreviews,
 
       allPreview: allPreview
         ? {

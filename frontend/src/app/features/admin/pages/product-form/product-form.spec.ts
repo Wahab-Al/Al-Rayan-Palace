@@ -3,7 +3,7 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { NEVER, of } from 'rxjs';
 import { vi } from 'vitest';
 
-import { ProductForm } from './product-form';
+import { mergeMediaFiles, ProductForm } from './product-form';
 import { AdminProductService } from '../../services/admin-product';
 import type { Product } from '../../../catalog/models/product';
 
@@ -90,13 +90,28 @@ describe('ProductForm Instagram reference', () => {
   it('includes an Instagram reference when creating a product', () => {
     createFixture();
     fillValidForm('https://www.instagram.com/p/new-reference/');
-    component.selectedFile.set(new File(['image'], 'sofa.jpg', { type: 'image/jpeg' }));
+    component.selectedFiles.set([new File(['image'], 'sofa.jpg', { type: 'image/jpeg' })]);
 
     component.submit();
 
     expect(service.createProduct).toHaveBeenCalledOnce();
     const formData = service.createProduct.mock.calls[0][0] as FormData;
     expect(formData.get('instagramUrl')).toBe('https://www.instagram.com/p/new-reference/');
+  });
+
+  it('submits all selected gallery images', () => {
+    createFixture();
+    fillValidForm('');
+    component.selectedFiles.set([
+      new File(['one'], 'sofa-1.jpg', { type: 'image/jpeg' }),
+      new File(['two'], 'sofa-2.jpg', { type: 'image/jpeg' }),
+      new File(['three'], 'sofa-3.jpg', { type: 'image/jpeg' }),
+    ]);
+
+    component.submit();
+
+    const formData = service.createProduct.mock.calls[0][0] as FormData;
+    expect(formData.getAll('media')).toHaveLength(3);
   });
 
   it('loads and updates an existing Instagram reference when editing', () => {
@@ -117,11 +132,25 @@ describe('ProductForm Instagram reference', () => {
   it('rejects URLs outside Instagram before submitting', () => {
     createFixture();
     fillValidForm('https://example.com/not-instagram');
-    component.selectedFile.set(new File(['image'], 'sofa.jpg', { type: 'image/jpeg' }));
+    component.selectedFiles.set([new File(['image'], 'sofa.jpg', { type: 'image/jpeg' })]);
 
     component.submit();
 
     expect(component.form.controls.instagramUrl.invalid).toBe(true);
     expect(service.createProduct).not.toHaveBeenCalled();
+  });
+});
+
+describe('product media selection', () => {
+  it('accumulates newly selected images and ignores duplicate selections', () => {
+    const first = new File(['first'], 'first.jpg', { type: 'image/jpeg', lastModified: 1 });
+    const second = new File(['second'], 'second.jpg', { type: 'image/jpeg', lastModified: 2 });
+    const third = new File(['third'], 'third.jpg', { type: 'image/jpeg', lastModified: 3 });
+
+    const afterSecondSelection = mergeMediaFiles([first], [second]);
+    const afterThirdSelection = mergeMediaFiles(afterSecondSelection, [third, first]);
+
+    expect(afterSecondSelection).toHaveLength(2);
+    expect(afterThirdSelection).toEqual([first, second, third]);
   });
 });

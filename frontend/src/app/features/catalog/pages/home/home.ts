@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
 
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -24,6 +25,10 @@ export class Home {
 
   private readonly router = inject(Router);
 
+  private readonly title = inject(Title);
+
+  private readonly meta = inject(Meta);
+
   products = signal<Product[]>([]);
   readonly categories = signal<CategoryPreview[]>([]);
   readonly allPreview = signal<AllPreview | null>(null);
@@ -37,6 +42,19 @@ export class Home {
   error = signal<string | null>(null);
 
   constructor() {
+    this.title.setTitle('Al Rayan Palace | Furniture and Interior Decor');
+    this.meta.updateTag({
+      name: 'description',
+      content:
+        'Discover furniture, furnishings, and interior decor collections from Al Rayan Palace in Qatar.',
+    });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:title', content: 'Al Rayan Palace' });
+    this.meta.updateTag({
+      property: 'og:description',
+      content: 'Furniture, furnishings, and interior decor in Qatar.',
+    });
+
     this.loadFeaturedProducts();
 
     this.route.queryParams.subscribe((params) => {
@@ -72,7 +90,7 @@ export class Home {
     this.loading.set(true);
     this.error.set(null);
 
-    this.productService.getProducts(this.currentPage(), 10, this.selectedCategory()).subscribe({
+    this.productService.getProducts(this.currentPage(), 12, this.selectedCategory()).subscribe({
       next: (response) => {
         this.products.set(response.items);
 
