@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
-import type { Product } from '../../models/product';
+import type { Product } from '../../../../shared/models/product';
 
 @Component({
   selector: 'app-product-card',

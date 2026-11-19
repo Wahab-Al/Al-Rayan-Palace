@@ -15,14 +15,14 @@ test('catalog opens a product and its image gallery switches the main image', as
   await expect(page.getByRole('heading', { name: 'Our Products' })).toBeVisible();
   expect(new URL(request.url()).searchParams.get('limit')).toBe('12');
   await expect(page.getByRole('heading', { name: 'Modern Living Room Set' })).toBeVisible();
-  await expect(page.locator('.products-grid .product-card')).toHaveCount(1);
+  await expect(page.getByRole('link', { name: 'View Modern Living Room Set' })).toHaveCount(1);
 
   await page.getByRole('link', { name: 'View Modern Living Room Set' }).click();
   await expectProductPage(page, 'Modern Living Room Set');
-  await expect(page.locator('.gallery-thumbnail')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /^Show product image/ })).toHaveCount(2);
 
   await page.getByRole('button', { name: 'Show product image 2' }).click();
-  await expect(page.locator('.gallery-main img')).toHaveAttribute(
+  await expect(page.getByRole('img', { name: 'Modern Living Room Set' }).first()).toHaveAttribute(
     'src',
     'https://assets.test/living-room-side.jpg',
   );

@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { Router, RouterLink } from '@angular/router';
 
-import { AuthService } from '../../../../core/services/auth';
+import { AuthStore } from '../../../../core/state/auth.store';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -11,23 +12,17 @@ import { AuthService } from '../../../../core/services/auth';
   styleUrl: './dashboard.scss',
 })
 export class Dashboard {
-  private readonly authService = inject(AuthService);
+  private readonly authStore = inject(AuthStore);
 
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly user = this.authService.user;
+  readonly user = this.authStore.user;
 
   logout(): void {
-    this.authService.logout().subscribe({
-      next: () => {
-        this.router.navigate(['/admin/login']);
-      },
-
-      error: () => {
-        this.authService.clearSession();
-
-        this.router.navigate(['/admin/login']);
-      },
-    });
+    this.authStore
+      .logout()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.router.navigate(['/admin/login']));
   }
 }

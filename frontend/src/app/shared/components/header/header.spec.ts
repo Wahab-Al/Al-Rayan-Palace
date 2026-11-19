@@ -1,9 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
 
 import { Header } from './header';
-import { AuthService } from '../../../core/services/auth';
+import { AuthStore } from '../../../core/state/auth.store';
+import { ThemeStore } from '../../../core/state/theme.store';
 
 describe('Header', () => {
   let fixture: ComponentFixture<Header>;
@@ -18,9 +21,17 @@ describe('Header', () => {
           { path: 'admin/products', component: Header },
         ]),
         {
-          provide: AuthService,
+          provide: AuthStore,
           useValue: {
             isAuthenticated: signal(false),
+            logout: vi.fn(() => of(undefined)),
+          },
+        },
+        {
+          provide: ThemeStore,
+          useValue: {
+            theme: signal('light'),
+            toggle: vi.fn(),
           },
         },
       ],

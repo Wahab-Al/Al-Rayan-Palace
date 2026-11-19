@@ -1,7 +1,6 @@
 <section class="hero">
   <!-- Background Video -->
   <video
-    #heroVideo
     class="hero-video"
     autoplay
     muted
@@ -9,6 +8,8 @@
     playsinline
     preload="metadata"
     aria-hidden="true"
+    [muted]="true"
+    [playbackRate]="0.5"
   >
     <source
       src="/videos/hero.mov"

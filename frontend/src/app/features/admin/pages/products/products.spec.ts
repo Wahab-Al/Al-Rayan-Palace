@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 
 import { Products } from './products';
-import type { ProductListResponse } from '../../../catalog/models/product-list-response';
+import type { ProductListResponse } from '../../../../shared/models/product-list-response';
 
 describe('Products', () => {
   let fixture: ComponentFixture<Products>;
@@ -63,39 +63,42 @@ describe('Products', () => {
     }
   });
 
-  it('applies text and facet filters and resets pagination', () => {
-    component.currentPage.set(3);
-    component.searchQuery.set('video');
-    component.selectedCategory.set('Dining Rooms');
-    component.selectedMediaType.set('video');
-    component.selectedFeatured.set('true');
-    component.applyFilters();
+  it('applies category, media, and featured filters', () => {
+    component.setCategoryFilter('Dining Rooms');
+    const categoryRequest = httpTesting.expectOne(
+      (candidate) => candidate.params.get('category') === 'Dining Rooms',
+    );
+    categoryRequest.flush(response);
 
-    expect(component.currentPage()).toBe(1);
-
-    const request = httpTesting.expectOne(
+    component.setMediaTypeFilter('video');
+    const mediaRequest = httpTesting.expectOne(
       (candidate) =>
-        candidate.url.endsWith('/admin/products') &&
-        candidate.params.get('search') === 'video' &&
+        candidate.params.get('category') === 'Dining Rooms' &&
+        candidate.params.get('mediaType') === 'video',
+    );
+    mediaRequest.flush(response);
+
+    component.setFeaturedFilter('true');
+    const featuredRequest = httpTesting.expectOne(
+      (candidate) =>
         candidate.params.get('category') === 'Dining Rooms' &&
         candidate.params.get('mediaType') === 'video' &&
         candidate.params.get('featured') === 'true',
     );
-
-    expect(request.request.params.get('page')).toBe('1');
-    request.flush(response);
+    featuredRequest.flush(response);
   });
 
-  it('keeps the newest results when an older filter request completes later', () => {
-    component.searchQuery.set('older');
-    component.applyFilters();
+  it('keeps the newest results when an older filter request completes later', async () => {
+    vi.useFakeTimers();
+    component.setSearchQuery('older');
+    await vi.advanceTimersByTimeAsync(260);
     const olderRequest = httpTesting.expectOne(
       (candidate) =>
         candidate.url.endsWith('/admin/products') && candidate.params.get('search') === 'older',
     );
 
-    component.searchQuery.set('newer');
-    component.applyFilters();
+    component.setSearchQuery('newer');
+    await vi.advanceTimersByTimeAsync(260);
     const newerRequest = httpTesting.expectOne(
       (candidate) =>
         candidate.url.endsWith('/admin/products') && candidate.params.get('search') === 'newer',
@@ -112,14 +115,16 @@ describe('Products', () => {
       updatedAt: '2026-01-01T00:00:00.000Z',
     };
     newerRequest.flush({ ...response, items: [newestProduct] });
-    olderRequest.flush(response);
 
+    expect(olderRequest.cancelled).toBe(true);
     expect(component.products()).toEqual([newestProduct]);
+    vi.useRealTimers();
   });
 
-  it('clears filters and displays the empty state after a no-match search', () => {
-    component.searchQuery.set('missing product');
-    component.applyFilters();
+  it('clears filters and displays the empty state after a no-match search', async () => {
+    vi.useFakeTimers();
+    component.setSearchQuery('missing product');
+    await vi.advanceTimersByTimeAsync(260);
 
     const searchRequest = httpTesting.expectOne(
       (candidate) =>
@@ -145,5 +150,6 @@ describe('Products', () => {
     expect(component.selectedCategory()).toBe('all');
     expect(component.selectedMediaType()).toBe('all');
     expect(component.selectedFeatured()).toBe('all');
+    vi.useRealTimers();
   });
 });

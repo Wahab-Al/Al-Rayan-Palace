@@ -61,15 +61,6 @@
   max-height: 560px;
 
   object-fit: contain;
-
-  border-radius: var(--radius-md);
-
-  transition: transform 0.5s ease;
-}
-
-.media-wrapper:hover img,
-.media-wrapper:hover video {
-  transform: scale(1.02);
 }
 
 .image-gallery {
@@ -81,10 +72,6 @@
 
 .image-gallery.two-images {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.gallery-main img {
-  max-height: 560px;
 }
 
 .gallery-thumbnails {
@@ -125,10 +112,6 @@
 .gallery-thumbnail:hover .thumbnail-hint,
 .gallery-thumbnail:focus-visible .thumbnail-hint {
   opacity: 1;
-}
-
-.gallery-thumbnail.active {
-  border-color: var(--color-accent);
 }
 
 .gallery-thumbnail img {

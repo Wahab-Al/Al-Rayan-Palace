@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
-import { NEVER, of } from 'rxjs';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject, NEVER, of } from 'rxjs';
 import { vi } from 'vitest';
 
 import { mergeMediaFiles, ProductForm } from './product-form';
 import { AdminProductService } from '../../services/admin-product';
-import type { Product } from '../../../catalog/models/product';
+import type { Product } from '../../../../shared/models/product';
 
 describe('ProductForm Instagram reference', () => {
   let fixture: ComponentFixture<ProductForm>;
   let component: ProductForm;
-  let productId: string | null;
+  let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let service: {
     getProducts: ReturnType<typeof vi.fn>;
     getProduct: ReturnType<typeof vi.fn>;
@@ -33,7 +33,7 @@ describe('ProductForm Instagram reference', () => {
   };
 
   beforeEach(async () => {
-    productId = null;
+    routeParams = new BehaviorSubject(convertToParamMap({}));
     service = {
       getProducts: vi.fn(() =>
         of({
@@ -58,13 +58,7 @@ describe('ProductForm Instagram reference', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: {
-            snapshot: {
-              paramMap: {
-                get: () => productId,
-              },
-            },
-          },
+          useValue: { paramMap: routeParams.asObservable() },
         },
         { provide: AdminProductService, useValue: service },
       ],
@@ -114,9 +108,11 @@ describe('ProductForm Instagram reference', () => {
     expect(formData.getAll('media')).toHaveLength(3);
   });
 
-  it('loads and updates an existing Instagram reference when editing', () => {
-    productId = 'product-1';
+  it('loads and updates an existing Instagram reference when editing', async () => {
+    routeParams.next(convertToParamMap({ id: 'product-1' }));
     createFixture();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(component.form.controls.instagramUrl.value).toBe(product.instagramUrl);
 

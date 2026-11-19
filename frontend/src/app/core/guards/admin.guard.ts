@@ -2,22 +2,16 @@ import { inject } from '@angular/core';
 
 import { CanActivateFn, Router } from '@angular/router';
 
-import { catchError, map, of } from 'rxjs';
+import { map } from 'rxjs';
 
-import { AuthService } from '../services/auth';
+import { AuthStore } from '../state/auth.store';
 
 export const adminGuard: CanActivateFn = () => {
-  const authService = inject(AuthService);
+  const authStore = inject(AuthStore);
 
   const router = inject(Router);
 
-  return authService.me().pipe(
-    map((response) => (response.authenticated ? true : router.parseUrl('/admin/login'))),
-
-    catchError(() => {
-      authService.clearSession();
-
-      return of(router.parseUrl('/admin/login'));
-    }),
-  );
+  return authStore
+    .validateSession()
+    .pipe(map((authenticated) => (authenticated ? true : router.parseUrl('/admin/login'))));
 };

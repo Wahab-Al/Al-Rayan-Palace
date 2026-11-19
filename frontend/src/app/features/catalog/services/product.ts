@@ -3,8 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { APP_CONFIG } from '../../../core/config/app-config';
-import type { Product } from '../models/product';
-import type { ProductListResponse } from '../models/product-list-response';
+import type { Product } from '../../../shared/models/product';
+import type { ProductListResponse } from '../../../shared/models/product-list-response';
 
 @Injectable({
   providedIn: 'root',

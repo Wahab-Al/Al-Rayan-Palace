@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
-import type { AllPreview, CategoryPreview } from '../../models/product-list-response';
+import type { AllPreview, CategoryPreview } from '../../../../shared/models/product-list-response';
 
 @Component({
   selector: 'app-category-filter',

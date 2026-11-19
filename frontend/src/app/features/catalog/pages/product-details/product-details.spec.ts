@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { ProductService } from '../../services/product';
-import type { Product } from '../../models/product';
+import type { Product } from '../../../../shared/models/product';
 import { ProductDetail } from './product-details';
 
 describe('ProductDetail', () => {
@@ -32,7 +32,7 @@ describe('ProductDetail', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: { get: () => product.id } } },
+          useValue: { paramMap: of(convertToParamMap({ id: product.id })) },
         },
         { provide: ProductService, useValue: { getProduct: () => of({ item: product }) } },
       ],

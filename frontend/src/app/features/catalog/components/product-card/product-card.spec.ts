@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { ProductCard } from './product-card';
-import type { Product } from '../../models/product';
+import type { Product } from '../../../../shared/models/product';
 
 describe('ProductCard', () => {
   let component: ProductCard;

@@ -15,7 +15,7 @@ test('video products are configured to autoplay silently and loop', async ({ pag
   await page.getByRole('link', { name: 'View Modern Living Room Set' }).click();
 
   await expectProductPage(page, 'Modern Living Room Set');
-  const video = page.locator('.media-wrapper video');
+  const video = page.getByTestId('product-detail-video');
   await expect(video).toHaveAttribute('autoplay', '');
   await expect(video).toHaveAttribute('muted', '');
   await expect(video).toHaveAttribute('loop', '');

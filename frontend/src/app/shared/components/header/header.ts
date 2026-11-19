@@ -1,11 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 
 import { filter } from 'rxjs';
 
-import { AuthService } from '../../../core/services/auth';
-import { ThemeService } from '../../../core/services/theme';
+import { AuthStore } from '../../../core/state/auth.store';
+import { ThemeStore } from '../../../core/state/theme.store';
 
 @Component({
   selector: 'app-header',
@@ -14,13 +15,14 @@ import { ThemeService } from '../../../core/services/theme';
   styleUrl: './header.scss',
 })
 export class Header {
-  private readonly authService = inject(AuthService);
+  private readonly authStore = inject(AuthStore);
 
   private readonly router = inject(Router);
-  private readonly themeService = inject(ThemeService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly themeStore = inject(ThemeStore);
 
-  readonly theme = this.themeService.theme;
-  readonly isAuthenticated = this.authService.isAuthenticated;
+  readonly theme = this.themeStore.theme;
+  readonly isAuthenticated = this.authStore.isAuthenticated;
 
   private readonly currentUrl = signal(this.router.url);
 
@@ -29,26 +31,22 @@ export class Header {
   constructor() {
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
+      .pipe(takeUntilDestroyed())
       .subscribe((event) => {
         this.currentUrl.set(event.urlAfterRedirects);
       });
   }
 
   toggleTheme(): void {
-    this.themeService.toggle();
+    this.themeStore.toggle();
   }
 
   logout(): void {
-    this.authService.logout().subscribe({
-      next: () => {
-        this.router.navigateByUrl('/');
-      },
-
-      error: () => {
-        this.authService.clearSession();
-
-        this.router.navigateByUrl('/');
-      },
-    });
+    this.authStore
+      .logout()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        void this.router.navigateByUrl('/');
+      });
   }
 }

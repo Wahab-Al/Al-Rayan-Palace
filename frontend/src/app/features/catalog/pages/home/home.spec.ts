@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 
 import { Home } from './home';
 import { ProductService } from '../../services/product';
-import type { ProductListResponse } from '../../models/product-list-response';
+import type { ProductListResponse } from '../../../../shared/models/product-list-response';
 
 describe('Home', () => {
   let component: Home;
@@ -28,7 +28,10 @@ describe('Home', () => {
       imports: [Home],
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { queryParams: of({}) } },
+        {
+          provide: ActivatedRoute,
+          useValue: { queryParamMap: of(convertToParamMap({})) },
+        },
         { provide: ProductService, useValue: { getProducts } },
       ],
     }).compileComponents();

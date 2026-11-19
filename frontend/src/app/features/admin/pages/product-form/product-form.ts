@@ -1,10 +1,21 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  OnDestroy,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { map } from 'rxjs';
 
-import { AdminProductService } from '../../services/admin-product';
+import { AdminProductsStore } from '../../state/admin-products.store';
 
 export function mergeMediaFiles(current: File[], added: File[]): File[] {
   const merged = [...current];
@@ -26,6 +37,7 @@ export function mergeMediaFiles(current: File[], added: File[]): File[] {
 @Component({
   selector: 'app-admin-product-form',
   imports: [ReactiveFormsModule, RouterLink],
+  providers: [AdminProductsStore],
   templateUrl: './product-form.html',
   styleUrl: './product-form.scss',
 })
@@ -35,18 +47,18 @@ export class ProductForm implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  private readonly productService = inject(AdminProductService);
+  private readonly productStore = inject(AdminProductsStore);
 
-  readonly loading = signal(false);
-
-  readonly submitting = signal(false);
-
-  readonly error = signal<string | null>(null);
+  private readonly validationError = signal<string | null>(null);
+  readonly loading = this.productStore.isLoading;
+  readonly submitting = this.productStore.isSaving;
+  readonly error = computed(() => this.validationError() ?? this.productStore.error());
 
   readonly success = signal<string | null>(null);
 
-  readonly categories = signal<string[]>([]);
+  readonly categories = this.productStore.categories;
 
   readonly selectedFiles = signal<File[]>([]);
 
@@ -76,81 +88,64 @@ export class ProductForm implements OnInit, OnDestroy {
     ],
   });
 
+  constructor() {
+    effect(() => {
+      const product = this.productStore.currentProduct();
+      if (!product) return;
+
+      this.form.patchValue({
+        title: product.title,
+        description: product.description ?? '',
+        category: product.category,
+        featured: product.featured,
+        instagramUrl: product.instagramUrl ?? '',
+      });
+      this.previewUrls.set(
+        product.mediaType === 'image' && product.images?.length
+          ? product.images
+          : [product.mediaUrl],
+      );
+      this.previewType.set(product.mediaType);
+    });
+
+    effect(() => {
+      if (this.productStore.saveStatus() === 'success') {
+        this.success.set(
+          this.isEdit() ? 'Product updated successfully.' : 'Product created successfully.',
+        );
+        void this.router.navigateByUrl('/');
+      }
+    });
+  }
+
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-
-    if (id) {
-      this.productId.set(id);
-      this.isEdit.set(true);
-      this.loadProduct(id);
-      return;
-    }
-
-    this.loadCategories();
+    this.productStore.loadCategories();
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id')),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((id) => {
+        this.productId.set(id);
+        this.isEdit.set(id !== null);
+        if (id) this.productStore.loadProduct(id);
+      });
   }
 
   ngOnDestroy(): void {
     this.revokePreview();
   }
 
-  private loadCategories(): void {
-    this.productService.getProducts(1, 1).subscribe({
-      next: (response) => {
-        this.categories.set(response.categories);
-      },
-
-      error: () => {
-        this.categories.set([]);
-      },
-    });
-  }
-
-  private loadProduct(id: string): void {
-    this.loading.set(true);
-    this.error.set(null);
-
-    this.productService.getProduct(id).subscribe({
-      next: (response) => {
-        const product = response.item;
-
-        this.form.patchValue({
-          title: product.title,
-          description: product.description ?? '',
-          category: product.category,
-          featured: product.featured,
-          instagramUrl: product.instagramUrl ?? '',
-        });
-
-        this.previewUrls.set(
-          product.mediaType === 'image' && product.images?.length
-            ? product.images
-            : [product.mediaUrl],
-        );
-
-        this.previewType.set(product.mediaType);
-
-        this.loading.set(false);
-
-        this.loadCategories();
-      },
-
-      error: (error) => {
-        this.loading.set(false);
-
-        this.error.set(error?.error?.message ?? 'Failed to load product');
-      },
-    });
-  }
-
   onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const input = event.target;
 
     const addedFiles = Array.from(input.files ?? []);
     if (addedFiles.length === 0) {
       return;
     }
 
-    this.error.set(null);
+    this.validationError.set(null);
     this.success.set(null);
 
     const files = mergeMediaFiles(this.selectedFiles(), addedFiles);
@@ -159,7 +154,9 @@ export class ProductForm implements OnInit, OnDestroy {
     if ((!areImages && !isSingleVideo) || (areImages && files.length > 3)) {
       input.value = '';
 
-      this.error.set('Choose 1 to 3 images, or choose a single video. Do not mix media types.');
+      this.validationError.set(
+        'Choose 1 to 3 images, or choose a single video. Do not mix media types.',
+      );
 
       return;
     }
@@ -169,7 +166,7 @@ export class ProductForm implements OnInit, OnDestroy {
     if (files.some((file) => file.size > maxSize)) {
       input.value = '';
 
-      this.error.set('Each file must be 25MB or smaller.');
+      this.validationError.set('Each file must be 25MB or smaller.');
 
       return;
     }
@@ -182,7 +179,7 @@ export class ProductForm implements OnInit, OnDestroy {
   }
 
   submit(): void {
-    this.error.set(null);
+    this.validationError.set(null);
     this.success.set(null);
 
     if (this.form.invalid) {
@@ -191,7 +188,7 @@ export class ProductForm implements OnInit, OnDestroy {
     }
 
     if (!this.isEdit() && this.selectedFiles().length === 0) {
-      this.error.set('Please select 1 to 3 images or one video.');
+      this.validationError.set('Please select 1 to 3 images or one video.');
 
       return;
     }
@@ -211,31 +208,9 @@ export class ProductForm implements OnInit, OnDestroy {
       formData.append('media', file, file.name);
     }
 
-    this.submitting.set(true);
-
-    const request$ =
-      this.isEdit() && this.productId()
-        ? this.productService.updateProduct(this.productId()!, formData)
-        : this.productService.createProduct(formData);
-
-    request$.subscribe({
-      next: () => {
-        this.submitting.set(false);
-
-        this.success.set(
-          this.isEdit() ? 'Product updated successfully.' : 'Product created successfully.',
-        );
-
-        setTimeout(() => {
-          this.router.navigateByUrl('/');
-        }, 500);
-      },
-
-      error: (error) => {
-        this.submitting.set(false);
-
-        this.error.set(error?.error?.message ?? 'Failed to save product');
-      },
+    this.productStore.saveProduct({
+      id: this.isEdit() ? this.productId() : null,
+      formData,
     });
   }
 

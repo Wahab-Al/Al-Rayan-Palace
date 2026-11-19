@@ -12,5 +12,9 @@ dist/
 
 # Logs
 *.log
+
 # Sensitive local files
 **/cookies.txt
+
+#Angular Rules
+MY_ANGULAR_ENGINEERING_STANDARD.md

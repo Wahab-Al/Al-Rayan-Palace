@@ -7,7 +7,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 
 import { routes } from './app.routes';
-import { AuthService } from './core/services/auth';
+import { AuthStore } from './core/state/auth.store';
 import { provideClientHydration } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
@@ -19,7 +19,7 @@ export const appConfig: ApplicationConfig = {
       if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
 
       return firstValueFrom(
-        inject(AuthService)
+        inject(AuthStore)
           .logout()
           .pipe(catchError(() => of(null))),
       );

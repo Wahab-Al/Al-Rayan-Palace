@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ThemeService } from './theme';
+import { ThemeStore } from '../state/theme.store';
 
-describe('ThemeService', () => {
+describe('ThemeStore', () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.dataset['theme'] = 'light';
@@ -12,25 +12,25 @@ describe('ThemeService', () => {
   it('restores the saved theme and applies it to the document', () => {
     window.localStorage.setItem('alrayan-theme', 'dark');
 
-    const service = TestBed.inject(ThemeService);
+    const store = TestBed.inject(ThemeStore);
 
-    expect(service.theme()).toBe('dark');
+    expect(store.theme()).toBe('dark');
     expect(document.documentElement.dataset['theme']).toBe('dark');
     expect(document.documentElement.style.colorScheme).toBe('dark');
   });
 
   it('toggles the theme and persists the selection', () => {
-    const service = TestBed.inject(ThemeService);
+    const store = TestBed.inject(ThemeStore);
 
-    service.toggle();
+    store.toggle();
 
-    expect(service.theme()).toBe('dark');
+    expect(store.theme()).toBe('dark');
     expect(window.localStorage.getItem('alrayan-theme')).toBe('dark');
     expect(document.documentElement.dataset['theme']).toBe('dark');
 
-    service.toggle();
+    store.toggle();
 
-    expect(service.theme()).toBe('light');
+    expect(store.theme()).toBe('light');
     expect(window.localStorage.getItem('alrayan-theme')).toBe('light');
   });
 });

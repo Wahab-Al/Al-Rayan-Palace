@@ -1,10 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Router, RouterLink } from '@angular/router';
 
-import { AuthService } from '../../../../core/services/auth';
+import { AuthStore } from '../../../../core/state/auth.store';
 
 @Component({
   selector: 'app-admin-login',
@@ -15,13 +15,13 @@ import { AuthService } from '../../../../core/services/auth';
 export class Login {
   private readonly fb = inject(FormBuilder);
 
-  private readonly authService = inject(AuthService);
+  private readonly authStore = inject(AuthStore);
 
   private readonly router = inject(Router);
 
-  readonly loading = signal(false);
-
-  readonly error = signal<string | null>(null);
+  private readonly validationError = signal<string | null>(null);
+  readonly loading = computed(() => this.authStore.loginStatus() === 'pending');
+  readonly error = computed(() => this.validationError() ?? this.authStore.loginError());
 
   readonly loginForm = this.fb.nonNullable.group({
     username: ['', Validators.required],
@@ -29,32 +29,26 @@ export class Login {
     password: ['', Validators.required],
   });
 
+  constructor() {
+    effect(() => {
+      if (this.authStore.loginStatus() === 'success') {
+        void this.router.navigateByUrl('/admin');
+      }
+    });
+  }
+
   submit(): void {
-    this.error.set(null);
+    this.validationError.set(null);
+    this.authStore.resetLoginStatus();
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
-      this.error.set('Please enter username and password.');
+      this.validationError.set('Please enter username and password.');
       return;
     }
 
-    this.loading.set(true);
-
     const { username, password } = this.loginForm.getRawValue();
-
-    this.authService.login(username, password).subscribe({
-      next: () => {
-        this.loading.set(false);
-
-        this.router.navigateByUrl('/admin');
-      },
-
-      error: (error) => {
-        this.loading.set(false);
-
-        this.error.set(error?.error?.message ?? 'Invalid username or password');
-      },
-    });
+    this.authStore.login({ username, password });
   }
 
   goHome(): void {

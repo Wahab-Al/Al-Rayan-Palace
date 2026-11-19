@@ -24,7 +24,7 @@
         type="search"
         maxlength="120"
         [value]="searchQuery()"
-        (input)="setSearchQuery($any($event.target).value)"
+        (input)="setSearchQueryFromEvent($event)"
         aria-label="Search by product name, category, type or featured status"
         placeholder="Name, category, type or featured"
       />
@@ -35,7 +35,7 @@
       <select
         id="category-filter"
         [value]="selectedCategory()"
-        (change)="setCategoryFilter($any($event.target).value)"
+        (change)="setCategoryFilterFromEvent($event)"
       >
         <option value="all">All categories</option>
         @for (category of categories(); track category) {
@@ -49,7 +49,7 @@
       <select
         id="type-filter"
         [value]="selectedMediaType()"
-        (change)="setMediaTypeFilter($any($event.target).value)"
+        (change)="setMediaTypeFilterFromEvent($event)"
       >
         <option value="all">All types</option>
         <option value="image">Image</option>
@@ -62,7 +62,7 @@
       <select
         id="featured-filter"
         [value]="selectedFeatured()"
-        (change)="setFeaturedFilter($any($event.target).value)"
+        (change)="setFeaturedFilterFromEvent($event)"
       >
         <option value="all">All products</option>
         <option value="true">Featured</option>
