@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectProductPage, mockPublicApi } from './support';
+import { expectProductPage, makeProduct, mockPublicApi } from './support';
 
 test('catalog opens a product and its image gallery switches the main image', async ({ page }) => {
   await mockPublicApi(page);
@@ -26,4 +26,39 @@ test('catalog opens a product and its image gallery switches the main image', as
     'src',
     'https://assets.test/living-room-side.jpg',
   );
+});
+
+test('two-image gallery keeps both images full-sized on tablet and phone widths', async ({
+  page,
+}) => {
+  const mainImage = 'https://assets.test/living-room-main.jpg';
+  await mockPublicApi(page, {
+    product: makeProduct({
+      mediaUrl: mainImage,
+      images: [mainImage, 'https://assets.test/living-room-side.jpg'],
+    }),
+  });
+
+  for (const width of [650, 390]) {
+    await page.setViewportSize({ width, height: 864 });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'View Modern Living Room Set' }).click();
+    await expectProductPage(page, 'Modern Living Room Set');
+
+    const mainImageBox = await page
+      .getByRole('img', { name: 'Modern Living Room Set', exact: true })
+      .boundingBox();
+    const secondImageBox = await page
+      .getByRole('button', { name: 'Show product image 2' })
+      .boundingBox();
+
+    if (!mainImageBox || !secondImageBox) {
+      throw new Error('Both product images must be visible at mobile widths.');
+    }
+
+    expect(Math.abs(mainImageBox.width - secondImageBox.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(mainImageBox.height - secondImageBox.height)).toBeLessThanOrEqual(2);
+
+    await page.goBack();
+  }
 });
