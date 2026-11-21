@@ -15,6 +15,8 @@ import productsRouter from './routes/products.js';
 import adminProductsRouter from './routes/admin-products.js';
 
 import { requireAdmin } from './middleware/requireAdmin.js';
+import { requireTrustedOrigin } from './middleware/requireTrustedOrigin.js';
+import { releaseUploadLease } from './utils/uploadLease.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -74,7 +76,12 @@ app.get('/api/sitemap.xml', async (_req, res) => {
   }
 });
 
+// Validate browser origin on authentication requests.
+app.use('/api/auth', requireTrustedOrigin);
+
+// Keep login rate limiting.
 app.use('/api/auth/login', loginLimiter);
+
 app.use('/api/auth', authRouter);
 
 app.get('/api/auth/me', requireAdmin, (req, res) => {
@@ -89,7 +96,14 @@ app.use('/api/products', publicApiLimiter, productsRouter);
 app.use('/api/admin/products', adminProductsRouter);
 
 app.use(
-  (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  (
+    error: unknown,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    releaseUploadLease(req);
+
     if (error instanceof multer.MulterError) {
       res.status(400).json({
         message:
