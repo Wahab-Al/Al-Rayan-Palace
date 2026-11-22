@@ -126,7 +126,7 @@ app.use(
 const start = async () => {
   await connectDB(config.MONGO_URI, config.MONGO_MAX_POOL_SIZE, config.MONGO_DNS_SERVERS);
 
-  app.listen(config.PORT, () => {
+  app.listen(config.PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${config.PORT}`);
   });
 };
