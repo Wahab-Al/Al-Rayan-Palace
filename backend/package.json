@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test src/controller/product.controller.spec.ts",
+    "test": "tsx --test src/controller/product.controller.spec.ts src/controller/auth.controller.spec.ts src/routes/auth.integration.spec.ts src/middleware/validateUploadedMedia.spec.ts src/middleware/uploadMedia.integration.spec.ts src/middleware/requireTrustedOrigin.spec.ts src/middleware/uploadConcurrency.spec.ts src/services/auth.service.spec.ts src/services/cloudinary.service.spec.ts src/routes/admin-products.authorization.integration.spec.ts",
     "seed": "tsx src/seed.ts",
     "start": "node dist/server.js",
     "format": "prettier --write \"src/**/*.ts\" \"*.json\"",
@@ -24,10 +24,11 @@
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
+    "file-type": "^22.3.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.3",
-    "multer": "^2.4.0"
+    "multer": "^2.5.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -42,5 +43,9 @@
     "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "esbuild@0.28.2": true
   }
 }

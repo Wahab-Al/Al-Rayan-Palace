@@ -1,40 +1,70 @@
+
 import dotenv from 'dotenv';
 import { isIP } from 'node:net';
 
 dotenv.config();
 
+function fail(message: string): never {
+  console.error(`Error: ${message}`);
+  process.exit(1);
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
 
-  if (!value) {
-    console.error(`Error: ${name} is missing`);
-    process.exit(1);
+  if (!value || value.trim().length === 0) {
+    return fail(`${name} is missing`);
   }
 
   return value;
 }
 
-const jwtExpireSeconds = Number.parseInt(process.env.JWT_EXPIRE_SECONDS ?? '7200', 10);
-const mongoMaxPoolSize = Number.parseInt(process.env.MONGO_MAX_POOL_SIZE ?? '20', 10);
+function parsePositiveInteger(name: string, fallback: string): number {
+  const rawValue = process.env[name] ?? fallback;
+
+  // Accept positive integers only; reject values such as "7200abc".
+  if (!/^[1-9]\d*$/.test(rawValue)) {
+    return fail(`${name} must be a positive integer`);
+  }
+
+  const parsedValue = Number(rawValue);
+
+  if (!Number.isSafeInteger(parsedValue)) {
+    return fail(`${name} exceeds the safe integer range`);
+  }
+
+  return parsedValue;
+}
+
+const jwtSecret = requireEnv('JWT_SECRET');
+
+// This project uses a 32-byte random secret encoded as 64 hex characters.
+if (!/^[a-f0-9]{64}$/i.test(jwtSecret)) {
+  fail(
+    'JWT_SECRET must contain exactly 64 hexadecimal characters. ' +
+      'Generate it with: openssl rand -hex 32',
+  );
+}
+
+const jwtExpireSeconds = parsePositiveInteger('JWT_EXPIRE_SECONDS', '7200');
+const mongoMaxPoolSize = parsePositiveInteger('MONGO_MAX_POOL_SIZE', '20');
+
+const uploadMaxConcurrent = parsePositiveInteger(
+  'UPLOAD_MAX_CONCURRENT',
+  '1',
+);
+
+if (uploadMaxConcurrent > 4) {
+  fail('UPLOAD_MAX_CONCURRENT must be between 1 and 4');
+}
+
 const mongoDnsServers = (process.env.MONGO_DNS_SERVERS ?? '')
   .split(',')
   .map((server) => server.trim())
   .filter(Boolean);
 
-if (!Number.isFinite(jwtExpireSeconds) || jwtExpireSeconds <= 0) {
-  console.error('Error: JWT_EXPIRE_SECONDS must be a positive number');
-
-  process.exit(1);
-}
-
-if (!Number.isFinite(mongoMaxPoolSize) || mongoMaxPoolSize < 1) {
-  console.error('Error: MONGO_MAX_POOL_SIZE must be a positive number');
-  process.exit(1);
-}
-
 if (mongoDnsServers.some((server) => isIP(server) === 0)) {
-  console.error('Error: MONGO_DNS_SERVERS must be a comma-separated list of IP addresses');
-  process.exit(1);
+  fail('MONGO_DNS_SERVERS must be a comma-separated list of IP addresses');
 }
 
 const config = {
@@ -47,8 +77,12 @@ const config = {
   MONGO_MAX_POOL_SIZE: mongoMaxPoolSize,
   MONGO_DNS_SERVERS: mongoDnsServers,
 
-  JWT_SECRET: requireEnv('JWT_SECRET'),
+  UPLOAD_MAX_CONCURRENT: uploadMaxConcurrent,
+
+  JWT_SECRET: jwtSecret,
   JWT_EXPIRE_SECONDS: jwtExpireSeconds,
+  JWT_ISSUER: requireEnv('JWT_ISSUER'),
+  JWT_AUDIENCE: requireEnv('JWT_AUDIENCE'),
 
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,

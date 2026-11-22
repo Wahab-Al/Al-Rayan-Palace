@@ -1,12 +1,22 @@
 import type { RequestHandler } from 'express';
+
 import mongoose from 'mongoose';
 
 import Product, { type IProduct } from '../models/product.js';
+
 import {
   deleteMedia,
   uploadMedia,
   type CloudinaryResourceType,
 } from '../services/cloudinary.service.js';
+
+import { releaseUploadLease } from '../utils/uploadLease.js';
+
+// -----------------------------------------------------------------------------
+
+// Validation and normalization helpers
+
+// -----------------------------------------------------------------------------
 
 function parseBoolean(value: unknown, fallback = false): boolean {
   if (typeof value === 'boolean') {
@@ -15,6 +25,7 @@ function parseBoolean(value: unknown, fallback = false): boolean {
 
   if (typeof value === 'string') {
     if (value === 'true') return true;
+
     if (value === 'false') return false;
   }
 
@@ -31,6 +42,8 @@ function cleanOptionalString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+const INSTAGRAM_URL_ERROR = 'Instagram reference must be a valid HTTPS Instagram URL';
+
 export function parseInstagramUrl(value: unknown): string | undefined {
   const candidate = cleanOptionalString(value);
 
@@ -39,7 +52,7 @@ export function parseInstagramUrl(value: unknown): string | undefined {
   }
 
   if (candidate.length > 2048) {
-    throw new Error('Instagram reference must be a valid HTTPS Instagram URL');
+    throw new Error(INSTAGRAM_URL_ERROR);
   }
 
   let parsed: URL;
@@ -47,7 +60,7 @@ export function parseInstagramUrl(value: unknown): string | undefined {
   try {
     parsed = new URL(candidate);
   } catch {
-    throw new Error('Instagram reference must be a valid HTTPS Instagram URL');
+    throw new Error(INSTAGRAM_URL_ERROR);
   }
 
   const hostname = parsed.hostname.toLowerCase();
@@ -58,7 +71,7 @@ export function parseInstagramUrl(value: unknown): string | undefined {
     parsed.password.length > 0 ||
     (hostname !== 'instagram.com' && hostname !== 'www.instagram.com')
   ) {
-    throw new Error('Instagram reference must be a valid HTTPS Instagram URL');
+    throw new Error(INSTAGRAM_URL_ERROR);
   }
 
   return parsed.toString();
@@ -73,8 +86,11 @@ function escapeSearchText(value: string): string {
 
 export function buildAdminProductFilter(filters: {
   search: string;
+
   category: string;
+
   mediaType: string;
+
   featured: string;
 }): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
@@ -97,11 +113,15 @@ export function buildAdminProductFilter(filters: {
 
   if (search) {
     const expression = new RegExp(escapeSearchText(search), 'i');
+
     const conditions: Record<string, unknown>[] = [
       { title: expression },
+
       { category: expression },
+
       { mediaType: expression },
     ];
+
     const normalizedSearch = search.toLowerCase();
 
     if (
@@ -142,6 +162,7 @@ export function validateMediaSelection(files: Array<{ mimetype: string }>): stri
   }
 
   const types = new Set(files.map((file) => getMediaType(file.mimetype)));
+
   if (types.size !== 1 || (types.has('video') && files.length !== 1)) {
     return 'Upload 1 to 3 images or one video per product';
   }
@@ -149,18 +170,62 @@ export function validateMediaSelection(files: Array<{ mimetype: string }>): stri
   return null;
 }
 
+/**
+
+ * Identifies expected client-side validation errors.
+
+ * Unexpected provider, database, and programming errors must not be
+
+ * returned directly to clients.
+
+ */
+
+function isProductValidationError(message: string): boolean {
+  return (
+    message.endsWith(' is required') ||
+    message.includes('characters or less') ||
+    message === INSTAGRAM_URL_ERROR ||
+    message === 'Media file is required'
+  );
+}
+
+/**
+
+ * Returns a generic server error without exposing internal exception details.
+
+ */
+
+function sendInternalServerError(res: Parameters<RequestHandler>[1]): void {
+  if (!res.headersSent) {
+    res.status(500).json({
+      message: 'Server error',
+    });
+  }
+}
+
 type ProductForMapping = {
   _id: mongoose.Types.ObjectId;
+
   title: string;
+
   description?: string;
+
   category: string;
+
   mediaUrl: string;
+
   mediaType: 'image' | 'video';
+
   mediaPublicId?: string;
+
   gallery?: { url: string; publicId: string }[];
+
   featured: boolean;
+
   instagramUrl?: string;
+
   createdAt?: Date;
+
   updatedAt?: Date;
 };
 
@@ -171,15 +236,19 @@ function mapProduct(product: ProductForMapping) {
 
   return {
     id: product._id.toString(),
+
     title: product.title,
 
     ...(product.description ? { description: product.description } : {}),
 
     category: product.category,
+
     mediaUrl: product.mediaUrl,
+
     mediaType: product.mediaType,
 
     ...(product.mediaPublicId ? { mediaPublicId: product.mediaPublicId } : {}),
+
     ...(product.mediaType === 'image'
       ? {
           images: product.gallery?.length
@@ -193,9 +262,45 @@ function mapProduct(product: ProductForMapping) {
     ...(product.instagramUrl ? { instagramUrl: product.instagramUrl } : {}),
 
     createdAt: product.createdAt,
+
     updatedAt: product.updatedAt,
   };
 }
+
+export type NewProductInput = Omit<IProduct, 'createdAt' | 'updatedAt'>;
+
+export type ProductWriteDocument = ProductForMapping & {
+  set(path: string, value: unknown): unknown;
+
+  save(): Promise<unknown>;
+};
+
+export interface ProductWriteDependencies {
+  uploadMedia: typeof uploadMedia;
+
+  deleteMedia: typeof deleteMedia;
+
+  createProductRecord: (data: NewProductInput) => Promise<ProductForMapping>;
+
+  findProductByIdRecord: (id: string) => Promise<ProductWriteDocument | null>;
+}
+
+const defaultProductWriteDependencies: ProductWriteDependencies = {
+  uploadMedia,
+
+  deleteMedia,
+
+  createProductRecord: async (data) => (await Product.create(data)) as unknown as ProductForMapping,
+
+  findProductByIdRecord: async (id) =>
+    (await Product.findById(id)) as unknown as ProductWriteDocument | null,
+};
+
+// -----------------------------------------------------------------------------
+
+// Admin product read operations
+
+// -----------------------------------------------------------------------------
 
 export const getAdminProducts: RequestHandler = async (req, res) => {
   try {
@@ -218,43 +323,55 @@ export const getAdminProducts: RequestHandler = async (req, res) => {
 
     const filter = buildAdminProductFilter({
       search,
+
       category,
+
       mediaType,
+
       featured,
     });
 
     const total = await Product.countDocuments(filter);
 
     const items = await Product.find(filter)
+
       .sort({ createdAt: -1 })
+
       .skip((page - 1) * limit)
+
       .limit(limit)
+
       .lean();
 
     const categories = await Product.distinct('category');
 
     res.json({
       items: items.map(mapProduct),
+
       total,
+
       page,
+
       pages: Math.max(1, Math.ceil(total / limit)),
+
       categories: categories.sort(),
     });
-  } catch {
-    res.status(500).json({
-      message: 'Server error',
-    });
+  } catch (error: unknown) {
+    console.error('[getAdminProducts] Failed to retrieve products:', error);
+
+    sendInternalServerError(res);
   }
 };
 
 export const getAdminProduct: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (typeof id !== 'string' || !mongoose.isValidObjectId(id)) {
       res.status(400).json({
         message: 'Invalid product id',
       });
+
       return;
     }
 
@@ -264,332 +381,624 @@ export const getAdminProduct: RequestHandler = async (req, res) => {
       res.status(404).json({
         message: 'Product not found',
       });
+
       return;
     }
 
     res.json({
       item: mapProduct(product),
     });
-  } catch {
-    res.status(500).json({
-      message: 'Server error',
-    });
+  } catch (error: unknown) {
+    console.error('[getAdminProduct] Failed to retrieve product:', error);
+
+    sendInternalServerError(res);
   }
 };
 
-export const createProduct: RequestHandler = async (req, res) => {
-  const uploadedMedia: { publicId: string; resourceType: CloudinaryResourceType }[] = [];
+// -----------------------------------------------------------------------------
 
-  try {
-    const title = requireString(req.body.title, 'title');
-    const category = requireString(req.body.category, 'category');
+// Product creation
 
-    if (title.length > 120) {
-      res.status(400).json({
-        message: 'Title must be 120 characters or less',
-      });
-      return;
-    }
+// -----------------------------------------------------------------------------
 
-    if (category.length > 80) {
-      res.status(400).json({
-        message: 'Category must be 80 characters or less',
-      });
-      return;
-    }
+export function createProductWriteHandlers(overrides: Partial<ProductWriteDependencies> = {}) {
+  const dependencies: ProductWriteDependencies = {
+    ...defaultProductWriteDependencies,
 
-    const instagramUrl = parseInstagramUrl(req.body.instagramUrl);
+    ...overrides,
+  };
 
-    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-    if (files.length === 0) {
-      res.status(400).json({
-        message: 'Media file is required',
-      });
-      return;
-    }
+  const createProductHandler: RequestHandler = async (req, res) => {
+    const uploadedMedia: {
+      publicId: string;
 
-    const mediaSelectionError = validateMediaSelection(files);
-    if (mediaSelectionError) {
-      res.status(400).json({ message: mediaSelectionError });
-      return;
-    }
+      resourceType: CloudinaryResourceType;
+    }[] = [];
 
-    const description = cleanOptionalString(req.body.description);
+    // Tracks whether MongoDB successfully created the product.
 
-    if (description && description.length > 1000) {
-      res.status(400).json({
-        message: 'Description must be 1000 characters or less',
-      });
-      return;
-    }
+    let productSaved = false;
 
-    const featured = parseBoolean(req.body.featured, false);
+    try {
+      const body = req.body ?? {};
 
-    const firstFile = files[0];
-    if (!firstFile) throw new Error('Media file is required');
-    const mediaType = getMediaType(firstFile.mimetype);
-    const uploaded: Awaited<ReturnType<typeof uploadMedia>>[] = [];
-    for (const file of files) {
-      const media = await uploadMedia(file.buffer, mediaType);
-      uploaded.push(media);
-      uploadedMedia.push({ publicId: media.publicId, resourceType: media.resourceType });
-    }
+      const title = requireString(body.title, 'title');
 
-    const primaryMedia = uploaded[0];
-    if (!primaryMedia) throw new Error('Media upload failed');
+      const category = requireString(body.category, 'category');
 
-    const productData = {
-      title,
-      category,
-      mediaUrl: primaryMedia.secureUrl,
-      mediaType: primaryMedia.resourceType,
-      featured,
-      ...(description ? { description } : {}),
-      ...(instagramUrl ? { instagramUrl } : {}),
-      mediaPublicId: primaryMedia.publicId,
-      ...(mediaType === 'image'
-        ? { gallery: uploaded.map((media) => ({ url: media.secureUrl, publicId: media.publicId })) }
-        : {}),
-    };
+      if (title.length > 120) {
+        res.status(400).json({
+          message: 'Title must be 120 characters or less',
+        });
 
-    const product = await Product.create(productData);
-
-    res.status(201).json({
-      item: mapProduct(product),
-    });
-  } catch (error) {
-    for (const media of uploadedMedia) {
-      try {
-        await deleteMedia(media.publicId, media.resourceType);
-      } catch {
-        // Ignore cleanup failure; the request still reports the original error.
-      }
-    }
-
-    const message = error instanceof Error ? error.message : 'Server error';
-
-    if (
-      message.includes('is required') ||
-      message.includes('characters or less') ||
-      message.includes('Instagram reference') ||
-      message.includes('Cloudinary')
-    ) {
-      res.status(400).json({ message });
-      return;
-    }
-
-    res.status(500).json({
-      message: 'Server error',
-    });
-  }
-};
-
-export const updateProduct: RequestHandler = async (req, res) => {
-  const uploadedMedia: { publicId: string; resourceType: CloudinaryResourceType }[] = [];
-
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.isValidObjectId(id)) {
-      res.status(400).json({
-        message: 'Invalid product id',
-      });
-      return;
-    }
-
-    const product = await Product.findById(id);
-
-    if (!product) {
-      res.status(404).json({
-        message: 'Product not found',
-      });
-      return;
-    }
-
-    // Keep the old Cloudinary media information
-    // BEFORE changing the product.
-    const oldMedia = product.gallery?.length
-      ? product.gallery.map((image) => ({
-          publicId: image.publicId,
-          resourceType: 'image' as const,
-        }))
-      : product.mediaPublicId
-        ? [{ publicId: product.mediaPublicId, resourceType: product.mediaType }]
-        : [];
-
-    const title = typeof req.body.title === 'string' ? req.body.title.trim() : product.title;
-
-    const category =
-      typeof req.body.category === 'string' ? req.body.category.trim() : product.category;
-
-    const description =
-      typeof req.body.description === 'string' ? req.body.description.trim() : product.description;
-
-    const featured = parseBoolean(req.body.featured, product.featured);
-
-    const instagramUrl =
-      typeof req.body.instagramUrl === 'string'
-        ? parseInstagramUrl(req.body.instagramUrl)
-        : product.instagramUrl;
-
-    if (!title) {
-      res.status(400).json({
-        message: 'Title is required',
-      });
-      return;
-    }
-
-    if (!category) {
-      res.status(400).json({
-        message: 'Category is required',
-      });
-      return;
-    }
-
-    if (title.length > 120) {
-      res.status(400).json({
-        message: 'Title must be 120 characters or less',
-      });
-      return;
-    }
-
-    if (category.length > 80) {
-      res.status(400).json({
-        message: 'Category must be 80 characters or less',
-      });
-      return;
-    }
-
-    if (description && description.length > 1000) {
-      res.status(400).json({
-        message: 'Description must be 1000 characters or less',
-      });
-      return;
-    }
-
-    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-    let nextGallery: { url: string; publicId: string }[] | undefined;
-    if (files.length > 0) {
-      const mediaSelectionError = validateMediaSelection(files);
-      if (mediaSelectionError) {
-        res.status(400).json({ message: mediaSelectionError });
         return;
       }
 
-      const firstFile = files[0];
-      if (!firstFile) throw new Error('Media file is required');
-      const nextType = getMediaType(firstFile.mimetype);
-      const uploaded: Awaited<ReturnType<typeof uploadMedia>>[] = [];
-      for (const file of files) {
-        const media = await uploadMedia(file.buffer, nextType);
-        uploaded.push(media);
-        uploadedMedia.push({ publicId: media.publicId, resourceType: media.resourceType });
+      if (category.length > 80) {
+        res.status(400).json({
+          message: 'Category must be 80 characters or less',
+        });
+
+        return;
       }
+
+      const instagramUrl = parseInstagramUrl(body.instagramUrl);
+
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+      if (files.length === 0) {
+        res.status(400).json({
+          message: 'Media file is required',
+        });
+
+        return;
+      }
+
+      const mediaSelectionError = validateMediaSelection(files);
+
+      if (mediaSelectionError) {
+        res.status(400).json({
+          message: mediaSelectionError,
+        });
+
+        return;
+      }
+
+      const description = cleanOptionalString(body.description);
+
+      if (description && description.length > 1000) {
+        res.status(400).json({
+          message: 'Description must be 1000 characters or less',
+        });
+
+        return;
+      }
+
+      const featured = parseBoolean(body.featured, false);
+
+      const firstFile = files[0];
+
+      if (!firstFile) {
+        throw new Error('Media file is required');
+      }
+
+      const mediaType = getMediaType(firstFile.mimetype);
+
+      const uploaded: Awaited<ReturnType<typeof uploadMedia>>[] = [];
+
+      for (const file of files) {
+        const media = await dependencies.uploadMedia(file.buffer, mediaType);
+
+        uploaded.push(media);
+
+        uploadedMedia.push({
+          publicId: media.publicId,
+
+          resourceType: media.resourceType,
+        });
+      }
+
       const primaryMedia = uploaded[0];
-      if (!primaryMedia) throw new Error('Media upload failed');
-      product.mediaUrl = primaryMedia.secureUrl;
-      product.mediaType = primaryMedia.resourceType;
-      product.mediaPublicId = primaryMedia.publicId;
-      nextGallery =
-        nextType === 'image'
-          ? uploaded.map((media) => ({ url: media.secureUrl, publicId: media.publicId }))
-          : undefined;
-    }
 
-    product.title = title;
-    product.category = category;
-    product.description = description || undefined;
-    product.featured = featured;
-    product.set('instagramUrl', instagramUrl);
+      if (!primaryMedia) {
+        throw new Error('Media upload failed');
+      }
 
-    if (files.length > 0) {
-      product.set('gallery', nextGallery);
-    }
+      const productData = {
+        title,
 
-    await product.save();
+        category,
 
-    // DB now points to the new media.
-    // Only after a successful save do we remove
-    // the old Cloudinary media.
-    if (files.length > 0) {
-      for (const media of oldMedia) {
-        if (uploadedMedia.some((newMedia) => newMedia.publicId === media.publicId)) continue;
-        try {
-          await deleteMedia(media.publicId, media.resourceType);
-        } catch (error) {
-          console.error('Failed to delete old Cloudinary media:', error);
+        mediaUrl: primaryMedia.secureUrl,
+
+        mediaType: primaryMedia.resourceType,
+
+        featured,
+
+        ...(description ? { description } : {}),
+
+        ...(instagramUrl ? { instagramUrl } : {}),
+
+        mediaPublicId: primaryMedia.publicId,
+
+        ...(mediaType === 'image'
+          ? {
+              gallery: uploaded.map((media) => ({
+                url: media.secureUrl,
+
+                publicId: media.publicId,
+              })),
+            }
+          : {}),
+      };
+
+      const product = await dependencies.createProductRecord(productData);
+
+      // The product now references the uploaded Cloudinary assets.
+
+      productSaved = true;
+
+      res.status(201).json({
+        item: mapProduct(product),
+      });
+    } catch (error: unknown) {
+      // Do not delete uploaded assets if MongoDB already created the product.
+
+      if (!productSaved) {
+        for (const media of uploadedMedia) {
+          try {
+            await dependencies.deleteMedia(media.publicId, media.resourceType);
+          } catch (cleanupError: unknown) {
+            console.error(
+              '[createProduct] Failed to clean up newly uploaded media:',
+
+              {
+                publicId: media.publicId,
+
+                error: cleanupError,
+              },
+            );
+          }
         }
       }
-    }
 
-    res.json({
-      item: mapProduct(product),
-    });
-  } catch (error) {
-    // If the new media was uploaded but the DB update failed,
-    // remove the newly uploaded media to avoid an orphan.
-    for (const media of uploadedMedia) {
-      try {
-        await deleteMedia(media.publicId, media.resourceType);
-      } catch (cleanupError) {
-        console.error('Failed to clean up uploaded media:', cleanupError);
+      const message = error instanceof Error ? error.message : '';
+
+      if (isProductValidationError(message) || error instanceof mongoose.Error.ValidationError) {
+        res.status(400).json({
+          message:
+            error instanceof mongoose.Error.ValidationError ? 'Invalid product data' : message,
+        });
+
+        return;
       }
+
+      console.error('[createProduct] Failed to create product:', error);
+
+      sendInternalServerError(res);
+    } finally {
+      releaseUploadLease(req);
     }
+  };
 
-    const message = error instanceof Error ? error.message : 'Server error';
+  // -----------------------------------------------------------------------------
 
-    if (message.includes('Instagram reference')) {
-      res.status(400).json({ message });
-      return;
-    }
+  // Product update
 
-    res.status(500).json({
-      message,
-    });
-  }
-};
-export const deleteProduct: RequestHandler = async (req, res) => {
-  try {
-    const { id } = req.params;
+  // -----------------------------------------------------------------------------
 
-    if (!mongoose.isValidObjectId(id)) {
-      res.status(400).json({
-        message: 'Invalid product id',
-      });
-      return;
-    }
+  const updateProductHandler: RequestHandler = async (req, res) => {
+    const uploadedMedia: {
+      publicId: string;
 
-    const product = await Product.findById(id);
+      resourceType: CloudinaryResourceType;
+    }[] = [];
 
-    if (!product) {
-      res.status(404).json({
-        message: 'Product not found',
-      });
-      return;
-    }
+    // Tracks whether MongoDB successfully saved the update.
 
-    await Product.findByIdAndDelete(id);
+    let productSaved = false;
 
-    const mediaToDelete = product.gallery?.length
-      ? product.gallery.map((image) => ({
-          publicId: image.publicId,
-          resourceType: 'image' as const,
-        }))
-      : product.mediaPublicId
-        ? [{ publicId: product.mediaPublicId, resourceType: product.mediaType }]
-        : [];
-    for (const media of mediaToDelete) {
-      try {
-        await deleteMedia(media.publicId, media.resourceType);
-      } catch {
-        // ignore Cloudinary cleanup failure
+    try {
+      const { id } = req.params;
+
+      const body = req.body ?? {};
+
+      if (typeof id !== 'string' || !mongoose.isValidObjectId(id)) {
+        res.status(400).json({
+          message: 'Invalid product id',
+        });
+
+        return;
       }
-    }
 
-    res.status(204).send();
-  } catch {
-    res.status(500).json({
-      message: 'Server error',
-    });
-  }
-};
+      const product = await dependencies.findProductByIdRecord(id);
+
+      if (!product) {
+        res.status(404).json({
+          message: 'Product not found',
+        });
+
+        return;
+      }
+
+      // Preserve old Cloudinary references before changing the product.
+
+      const oldMedia = product.gallery?.length
+        ? product.gallery.map((image) => ({
+            publicId: image.publicId,
+
+            resourceType: 'image' as const,
+          }))
+        : product.mediaPublicId
+          ? [
+              {
+                publicId: product.mediaPublicId,
+
+                resourceType: product.mediaType,
+              },
+            ]
+          : [];
+
+      // Normalize incoming fields; omitted fields retain existing values.
+
+      const title = typeof body.title === 'string' ? body.title.trim() : product.title;
+
+      const category = typeof body.category === 'string' ? body.category.trim() : product.category;
+
+      const description =
+        typeof body.description === 'string' ? body.description.trim() : product.description;
+
+      const featured = parseBoolean(body.featured, product.featured);
+
+      const instagramUrl =
+        typeof body.instagramUrl === 'string'
+          ? parseInstagramUrl(body.instagramUrl)
+          : product.instagramUrl;
+
+      if (!title) {
+        res.status(400).json({
+          message: 'Title is required',
+        });
+
+        return;
+      }
+
+      if (!category) {
+        res.status(400).json({
+          message: 'Category is required',
+        });
+
+        return;
+      }
+
+      if (title.length > 120) {
+        res.status(400).json({
+          message: 'Title must be 120 characters or less',
+        });
+
+        return;
+      }
+
+      if (category.length > 80) {
+        res.status(400).json({
+          message: 'Category must be 80 characters or less',
+        });
+
+        return;
+      }
+
+      if (description && description.length > 1000) {
+        res.status(400).json({
+          message: 'Description must be 1000 characters or less',
+        });
+
+        return;
+      }
+
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+      let nextGallery: { url: string; publicId: string }[] | undefined;
+
+      if (files.length > 0) {
+        const mediaSelectionError = validateMediaSelection(files);
+
+        if (mediaSelectionError) {
+          res.status(400).json({
+            message: mediaSelectionError,
+          });
+
+          return;
+        }
+
+        const firstFile = files[0];
+
+        if (!firstFile) {
+          throw new Error('Media file is required');
+        }
+
+        const nextType = getMediaType(firstFile.mimetype);
+
+        const uploaded: Awaited<ReturnType<typeof uploadMedia>>[] = [];
+
+        for (const file of files) {
+          const media = await dependencies.uploadMedia(file.buffer, nextType);
+
+          uploaded.push(media);
+
+          uploadedMedia.push({
+            publicId: media.publicId,
+
+            resourceType: media.resourceType,
+          });
+        }
+
+        const primaryMedia = uploaded[0];
+
+        if (!primaryMedia) {
+          throw new Error('Media upload failed');
+        }
+
+        product.mediaUrl = primaryMedia.secureUrl;
+
+        product.mediaType = primaryMedia.resourceType;
+
+        product.mediaPublicId = primaryMedia.publicId;
+
+        nextGallery =
+          nextType === 'image'
+            ? uploaded.map((media) => ({
+                url: media.secureUrl,
+
+                publicId: media.publicId,
+              }))
+            : undefined;
+      }
+
+      // Apply product updates.
+
+      product.title = title;
+
+      product.category = category;
+
+      product.description = description || undefined;
+
+      product.featured = featured;
+
+      product.set('instagramUrl', instagramUrl);
+
+      // Keep the existing gallery if no replacement media was supplied.
+
+      if (files.length > 0) {
+        product.set('gallery', nextGallery);
+      }
+
+      await product.save();
+
+      // MongoDB now references the new media.
+
+      productSaved = true;
+
+      // Delete previous assets only after the database update succeeds.
+
+      if (files.length > 0) {
+        for (const media of oldMedia) {
+          const isStillReferenced = uploadedMedia.some(
+            (newMedia) => newMedia.publicId === media.publicId,
+          );
+
+          if (isStillReferenced) {
+            continue;
+          }
+
+          try {
+            await dependencies.deleteMedia(media.publicId, media.resourceType);
+          } catch (cleanupError: unknown) {
+            // The product update has succeeded. Do not roll it back because
+
+            // cleanup of an old external asset failed.
+
+            console.error(
+              '[updateProduct] Failed to delete old Cloudinary media:',
+
+              {
+                publicId: media.publicId,
+
+                error: cleanupError,
+              },
+            );
+          }
+        }
+      }
+
+      res.status(200).json({
+        item: mapProduct(product),
+      });
+    } catch (error: unknown) {
+      // If MongoDB did not confirm the update, attempt to remove new uploads.
+
+      if (!productSaved) {
+        for (const media of uploadedMedia) {
+          try {
+            await dependencies.deleteMedia(media.publicId, media.resourceType);
+          } catch (cleanupError: unknown) {
+            // Preserve the original failure if cleanup also fails.
+
+            console.error(
+              '[updateProduct] Failed to clean up newly uploaded media:',
+
+              {
+                publicId: media.publicId,
+
+                error: cleanupError,
+              },
+            );
+          }
+        }
+      }
+
+      const message = error instanceof Error ? error.message : '';
+
+      if (message === INSTAGRAM_URL_ERROR) {
+        res.status(400).json({
+          message: INSTAGRAM_URL_ERROR,
+        });
+
+        return;
+      }
+
+      if (error instanceof mongoose.Error.ValidationError) {
+        res.status(400).json({
+          message: 'Invalid product data',
+        });
+
+        return;
+      }
+
+      console.error('[updateProduct] Failed to update product:', error);
+
+      sendInternalServerError(res);
+    } finally {
+      releaseUploadLease(req);
+    }
+  };
+
+  return {
+    createProduct: createProductHandler,
+    updateProduct: updateProductHandler,
+  };
+}
+
+const productWriteHandlers = createProductWriteHandlers();
+
+export const createProduct = productWriteHandlers.createProduct;
+export const updateProduct = productWriteHandlers.updateProduct;
+
+// -----------------------------------------------------------------------------
+
+// Product deletion
+
+// -----------------------------------------------------------------------------
+
+interface ProductMediaReferenceSource {
+  mediaType: CloudinaryResourceType;
+
+  mediaPublicId?: string;
+
+  gallery?: { url: string; publicId: string }[];
+}
+
+interface DeleteProductDependencies {
+  findByIdAndDelete: (id: string) => Promise<ProductMediaReferenceSource | null>;
+
+  deleteMedia: typeof deleteMedia;
+}
+
+/**
+
+ * Creates a product deletion handler with injectable dependencies.
+
+ *
+
+ * MongoDB atomically deletes the product and returns the document
+
+ * containing the actual media references that must be cleaned up.
+
+ */
+
+export function createDeleteProductHandler(
+  dependencies: DeleteProductDependencies = {
+    findByIdAndDelete: async (id) => Product.findByIdAndDelete(id).exec(),
+
+    deleteMedia,
+  },
+): RequestHandler {
+  return async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      if (typeof id !== 'string' || !mongoose.isValidObjectId(id)) {
+        res.status(400).json({
+          message: 'Invalid product id',
+        });
+
+        return;
+      }
+
+      // Atomically delete the product and retrieve its final document.
+
+      const product = await dependencies.findByIdAndDelete(id);
+
+      if (!product) {
+        res.status(404).json({
+          message: 'Product not found',
+        });
+
+        return;
+      }
+
+      const mediaToDelete: {
+        publicId: string;
+
+        resourceType: CloudinaryResourceType;
+      }[] = product.gallery?.length
+        ? product.gallery.map((image) => ({
+            publicId: image.publicId,
+
+            resourceType: 'image',
+          }))
+        : product.mediaPublicId
+          ? [
+              {
+                publicId: product.mediaPublicId,
+
+                resourceType: product.mediaType,
+              },
+            ]
+          : [];
+
+      // Avoid sending duplicate deletion requests for the same asset.
+
+      const uniqueMedia = new Map<string, (typeof mediaToDelete)[number]>();
+
+      for (const media of mediaToDelete) {
+        const key = `${media.resourceType}:${media.publicId}`;
+
+        uniqueMedia.set(key, media);
+      }
+
+      // MongoDB deletion has already succeeded.
+
+      // Cloudinary cleanup is best-effort and must not reverse that result.
+
+      for (const media of uniqueMedia.values()) {
+        try {
+          await dependencies.deleteMedia(
+            media.publicId,
+
+            media.resourceType,
+          );
+        } catch (cleanupError: unknown) {
+          console.error(
+            '[deleteProduct] Failed to delete Cloudinary media:',
+
+            {
+              publicId: media.publicId,
+
+              resourceType: media.resourceType,
+
+              error: cleanupError,
+            },
+          );
+        }
+      }
+
+      res.status(204).send();
+    } catch (error: unknown) {
+      console.error('[deleteProduct] Failed to delete product:', error);
+
+      sendInternalServerError(res);
+    }
+  };
+}
+
+export const deleteProduct = createDeleteProductHandler();
