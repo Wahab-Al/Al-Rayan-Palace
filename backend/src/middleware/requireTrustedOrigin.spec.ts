@@ -1,4 +1,3 @@
-
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -9,10 +8,7 @@ import { requireTrustedOrigin } from './requireTrustedOrigin.js';
 
 type Headers = Record<string, string | undefined>;
 
-function executeMiddleware(
-  method: string,
-  headers: Headers = {},
-) {
+function executeMiddleware(method: string, headers: Headers = {}) {
   let statusCode = 200;
   let responseBody: unknown;
   let nextCalled = false;
@@ -104,6 +100,39 @@ test('does not allow an attacker subdomain', () => {
 
 test('allows safe GET requests without Origin', () => {
   const result = executeMiddleware('GET');
+
+  assert.equal(result.nextCalled, true);
+  assert.equal(result.statusCode, 200);
+});
+
+test('rejects malformed Origin values', () => {
+  const result = executeMiddleware('POST', {
+    origin: 'not-a-valid-origin',
+  });
+
+  assert.equal(result.nextCalled, false);
+  assert.equal(result.statusCode, 403);
+});
+
+test('rejects untrusted Origin even when Referer is trusted', () => {
+  const result = executeMiddleware('POST', {
+    origin: 'https://attacker.example',
+    referer: `${trustedOrigin}/admin`,
+  });
+
+  assert.equal(result.nextCalled, false);
+  assert.equal(result.statusCode, 403);
+});
+
+test('allows HEAD requests without Origin', () => {
+  const result = executeMiddleware('HEAD');
+
+  assert.equal(result.nextCalled, true);
+  assert.equal(result.statusCode, 200);
+});
+
+test('allows OPTIONS requests without Origin', () => {
+  const result = executeMiddleware('OPTIONS');
 
   assert.equal(result.nextCalled, true);
   assert.equal(result.statusCode, 200);

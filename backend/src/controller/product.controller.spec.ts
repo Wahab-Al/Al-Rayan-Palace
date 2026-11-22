@@ -5,12 +5,92 @@ import {
   buildAdminProductFilter,
   createDeleteProductHandler,
   createProduct,
+  createProductWriteHandlers,
   parseInstagramUrl,
   updateProduct,
   validateMediaSelection,
+  type ProductWriteDocument,
 } from './product.controller.js';
 
 const validProductId = '507f1f77bcf86cd799439011';
+
+function createProductWriteResponseMock() {
+  const state = {
+    statusCode: 200,
+    body: undefined as unknown,
+  };
+
+  const response = {
+    status(code: number) {
+      state.statusCode = code;
+      return response;
+    },
+
+    json(body: unknown) {
+      state.body = body;
+      return response;
+    },
+  };
+
+  return {
+    state,
+    response: response as never,
+  };
+}
+
+function createTestMediaFile(): Express.Multer.File {
+  return {
+    buffer: Buffer.from('test-media'),
+    mimetype: 'image/jpeg',
+  } as Express.Multer.File;
+}
+
+function createUploadedMedia(publicId: string) {
+  return {
+    secureUrl: `https://example.test/${publicId}.jpg`,
+    publicId,
+    resourceType: 'image' as const,
+  };
+}
+
+function createExistingProductDocument(
+  save: () => Promise<unknown> = async () => undefined,
+): ProductWriteDocument {
+  const document = {
+    _id: {
+      toString: () => validProductId,
+    },
+
+    title: 'Existing product',
+    category: 'Dining Rooms',
+    description: 'Existing description',
+    featured: false,
+
+    mediaUrl: 'https://example.test/old-image.jpg',
+    mediaType: 'image',
+    mediaPublicId: 'old-image',
+
+    gallery: [
+      {
+        url: 'https://example.test/old-image.jpg',
+        publicId: 'old-image',
+      },
+    ],
+
+    createdAt: new Date(),
+    updatedAt: new Date(),
+
+    set(path: string, value: unknown) {
+      Object.assign(this, {
+        [path]: value,
+      });
+    },
+
+    save,
+  };
+
+  return document as unknown as ProductWriteDocument;
+}
 
 function createProductDeleteResponseMock() {
   const state = {
@@ -167,13 +247,9 @@ test('create handler rejects a non-Instagram reference with a client error', asy
 });
 
 test('update handler does not expose internal errors', async (t) => {
-  t.mock.method(
-    Product,
-    'findById',
-    (() => {
-      throw new Error('Sensitive internal database details');
-    }) as typeof Product.findById,
-  );
+  t.mock.method(Product, 'findById', (() => {
+    throw new Error('Sensitive internal database details');
+  }) as typeof Product.findById);
 
   let statusCode = 200;
   let responseBody: unknown;
@@ -211,18 +287,12 @@ test('update handler does not expose internal errors', async (t) => {
     message: 'Server error',
   });
 
-  assert.equal(
-    JSON.stringify(responseBody).includes(
-      'Sensitive internal database details',
-    ),
-    false,
-  );
+  assert.equal(JSON.stringify(responseBody).includes('Sensitive internal database details'), false);
 
   // Suppress unused variable warning avoidance is unnecessary;
   // the test framework restores console.error after the test.
   void originalConsoleError;
 });
-
 
 test('rejects an invalid product ID without querying MongoDB', async () => {
   let databaseCalled = false;
@@ -237,11 +307,7 @@ test('rejects an invalid product ID without querying MongoDB', async () => {
 
   const { state, response } = createProductDeleteResponseMock();
 
-  await handler(
-    { params: { id: 'invalid-id' } } as never,
-    response,
-    (() => undefined) as never,
-  );
+  await handler({ params: { id: 'invalid-id' } } as never, response, (() => undefined) as never);
 
   assert.equal(state.statusCode, 400);
   assert.equal(databaseCalled, false);
@@ -255,11 +321,7 @@ test('returns 404 when the product does not exist', async () => {
 
   const { state, response } = createProductDeleteResponseMock();
 
-  await handler(
-    { params: { id: validProductId } } as never,
-    response,
-    (() => undefined) as never,
-  );
+  await handler({ params: { id: validProductId } } as never, response, (() => undefined) as never);
 
   assert.equal(state.statusCode, 404);
   assert.deepEqual(state.body, {
@@ -295,17 +357,10 @@ test('uses the atomically deleted document to clean up gallery media', async () 
 
   const { state, response } = createProductDeleteResponseMock();
 
-  await handler(
-    { params: { id: validProductId } } as never,
-    response,
-    (() => undefined) as never,
-  );
+  await handler({ params: { id: validProductId } } as never, response, (() => undefined) as never);
 
   assert.equal(databaseCalls, 1);
-  assert.deepEqual(deletedMedia, [
-    'image:image-1',
-    'image:image-2',
-  ]);
+  assert.deepEqual(deletedMedia, ['image:image-1', 'image:image-2']);
 
   assert.equal(state.statusCode, 204);
   assert.equal(state.sent, true);
@@ -330,11 +385,7 @@ test('deletes the primary video when the product has no gallery', async () => {
 
   const { state, response } = createProductDeleteResponseMock();
 
-  await handler(
-    { params: { id: validProductId } } as never,
-    response,
-    (() => undefined) as never,
-  );
+  await handler({ params: { id: validProductId } } as never, response, (() => undefined) as never);
 
   assert.deepEqual(deletedMedia, [
     {
@@ -371,11 +422,7 @@ test('continues deletion when Cloudinary cleanup fails', async (t) => {
 
   const { state, response } = createProductDeleteResponseMock();
 
-  await handler(
-    { params: { id: validProductId } } as never,
-    response,
-    (() => undefined) as never,
-  );
+  await handler({ params: { id: validProductId } } as never, response, (() => undefined) as never);
 
   assert.deepEqual(deletionAttempts, ['image-1', 'image-2']);
   assert.equal(state.statusCode, 204);
@@ -399,11 +446,7 @@ test('does not expose MongoDB errors when product deletion fails', async (t) => 
 
   const { state, response } = createProductDeleteResponseMock();
 
-  await handler(
-    { params: { id: validProductId } } as never,
-    response,
-    (() => undefined) as never,
-  );
+  await handler({ params: { id: validProductId } } as never, response, (() => undefined) as never);
 
   assert.equal(state.statusCode, 500);
   assert.deepEqual(state.body, {
@@ -411,4 +454,253 @@ test('does not expose MongoDB errors when product deletion fails', async (t) => 
   });
 
   assert.equal(cleanupCalled, false);
+});
+
+test('create: cleans up earlier uploads when a later upload fails', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+
+  let uploadCalls = 0;
+  let createCalls = 0;
+
+  const deletedMedia: Array<{
+    publicId: string;
+    resourceType: string;
+  }> = [];
+
+  const handlers = createProductWriteHandlers({
+    uploadMedia: async () => {
+      uploadCalls++;
+
+      if (uploadCalls === 2) {
+        throw new Error('Second upload failed');
+      }
+
+      return createUploadedMedia('new-image-1');
+    },
+
+    deleteMedia: async (publicId, resourceType) => {
+      deletedMedia.push({ publicId, resourceType });
+    },
+
+    createProductRecord: async () => {
+      createCalls++;
+      throw new Error('Should not reach database creation');
+    },
+  });
+
+  const { state, response } = createProductWriteResponseMock();
+
+  await handlers.createProduct(
+    {
+      body: {
+        title: 'Dining table',
+        category: 'Dining Rooms',
+      },
+      files: [createTestMediaFile(), createTestMediaFile()],
+    } as never,
+    response,
+    (() => undefined) as never,
+  );
+
+  assert.equal(uploadCalls, 2);
+  assert.equal(createCalls, 0);
+  assert.equal(state.statusCode, 500);
+
+  assert.deepEqual(deletedMedia, [
+    {
+      publicId: 'new-image-1',
+      resourceType: 'image',
+    },
+  ]);
+});
+
+test('create: cleans up all uploaded media when database creation fails', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+
+  const deletedMedia: string[] = [];
+
+  const handlers = createProductWriteHandlers({
+    uploadMedia: async (_buffer, _resourceType) => {
+      return createUploadedMedia(
+        deletedMedia.length === -1 ? 'unused' : `new-image-${uploadCount++}`,
+      );
+    },
+
+    deleteMedia: async (publicId) => {
+      deletedMedia.push(publicId);
+    },
+
+    createProductRecord: async () => {
+      throw new Error('Database creation failed');
+    },
+  });
+
+  let uploadCount = 1;
+
+  const { state, response } = createProductWriteResponseMock();
+
+  await handlers.createProduct(
+    {
+      body: {
+        title: 'Dining table',
+        category: 'Dining Rooms',
+      },
+      files: [createTestMediaFile(), createTestMediaFile()],
+    } as never,
+    response,
+    (() => undefined) as never,
+  );
+
+  assert.equal(state.statusCode, 500);
+
+  assert.deepEqual(deletedMedia, ['new-image-1', 'new-image-2']);
+});
+
+test('update: cleans up newly uploaded media when a later upload fails', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+
+  let uploadCalls = 0;
+  let saveCalled = false;
+
+  const deletedMedia: string[] = [];
+
+  const product = createExistingProductDocument(async () => {
+    saveCalled = true;
+  });
+
+  const originalMediaUrl = product.mediaUrl;
+
+  const handlers = createProductWriteHandlers({
+    findProductByIdRecord: async () => product,
+
+    uploadMedia: async () => {
+      uploadCalls++;
+
+      if (uploadCalls === 2) {
+        throw new Error('Second upload failed');
+      }
+
+      return createUploadedMedia('new-image-1');
+    },
+
+    deleteMedia: async (publicId) => {
+      deletedMedia.push(publicId);
+    },
+  });
+
+  const { state, response } = createProductWriteResponseMock();
+
+  await handlers.updateProduct(
+    {
+      params: {
+        id: validProductId,
+      },
+      body: {},
+      files: [createTestMediaFile(), createTestMediaFile()],
+    } as never,
+    response,
+    (() => undefined) as never,
+  );
+
+  assert.equal(uploadCalls, 2);
+  assert.equal(saveCalled, false);
+  assert.equal(state.statusCode, 500);
+
+  assert.deepEqual(deletedMedia, ['new-image-1']);
+
+  assert.equal(product.mediaUrl, originalMediaUrl);
+  assert.equal(product.mediaPublicId, 'old-image');
+});
+
+test('update: cleans up new media when saving the product fails', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+
+  let saveCalled = false;
+
+  const deletedMedia: string[] = [];
+
+  const product = createExistingProductDocument(async () => {
+    saveCalled = true;
+    throw new Error('Database update failed');
+  });
+
+  const handlers = createProductWriteHandlers({
+    findProductByIdRecord: async () => product,
+
+    uploadMedia: async () => {
+      return createUploadedMedia('new-image-1');
+    },
+
+    deleteMedia: async (publicId) => {
+      deletedMedia.push(publicId);
+    },
+  });
+
+  const { state, response } = createProductWriteResponseMock();
+
+  await handlers.updateProduct(
+    {
+      params: {
+        id: validProductId,
+      },
+      body: {},
+      files: [createTestMediaFile()],
+    } as never,
+    response,
+    (() => undefined) as never,
+  );
+
+  assert.equal(saveCalled, true);
+  assert.equal(state.statusCode, 500);
+
+  assert.deepEqual(deletedMedia, ['new-image-1']);
+});
+
+test('update: keeps the successful update when deleting old media fails', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+
+  let saveCalled = false;
+
+  const deletionAttempts: string[] = [];
+
+  const product = createExistingProductDocument(async () => {
+    saveCalled = true;
+  });
+
+  const handlers = createProductWriteHandlers({
+    findProductByIdRecord: async () => product,
+
+    uploadMedia: async () => {
+      return createUploadedMedia('new-image-1');
+    },
+
+    deleteMedia: async (publicId) => {
+      deletionAttempts.push(publicId);
+
+      if (publicId === 'old-image') {
+        throw new Error('Old Cloudinary asset deletion failed');
+      }
+    },
+  });
+
+  const { state, response } = createProductWriteResponseMock();
+
+  await handlers.updateProduct(
+    {
+      params: {
+        id: validProductId,
+      },
+      body: {},
+      files: [createTestMediaFile()],
+    } as never,
+    response,
+    (() => undefined) as never,
+  );
+
+  assert.equal(saveCalled, true);
+  assert.equal(state.statusCode, 200);
+
+  assert.deepEqual(deletionAttempts, ['old-image']);
+
+  assert.equal(product.mediaPublicId, 'new-image-1');
 });
