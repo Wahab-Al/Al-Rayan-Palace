@@ -7,11 +7,55 @@ import {
 import express from 'express';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+const SKIPPED_UPSTREAM_RESPONSE_HEADERS = new Set([
+  'connection',
+  'content-encoding',
+  'content-length',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'set-cookie',
+]);
+
+function forwardUpstreamHeaders(
+  headers: Headers,
+  res: express.Response,
+): void {
+  headers.forEach((value, name) => {
+    if (!SKIPPED_UPSTREAM_RESPONSE_HEADERS.has(name.toLowerCase())) {
+      res.setHeader(name, value);
+    }
+  });
+
+  // Preserve multiple Set-Cookie headers without combining them.
+  const cookies = headers.getSetCookie();
+
+  if (cookies.length > 0) {
+    res.setHeader('set-cookie', cookies);
+  }
+}
+
+async function forwardUpstreamBody(
+  body: ReadableStream<Uint8Array> | null,
+  res: express.Response,
+): Promise<void> {
+  if (!body) {
+    res.end();
+    return;
+  }
+
+  await pipeline(Readable.fromWeb(body as never), res);
+}
 
 app.get('/robots.txt', (_req, res) => {
   const publicSiteUrl = process.env['PUBLIC_SITE_URL']?.replace(/\/$/, '');
@@ -24,6 +68,7 @@ app.get('/robots.txt', (_req, res) => {
 
 app.get('/sitemap.xml', async (_req, res, next) => {
   const apiOrigin = process.env['API_ORIGIN'];
+
   if (!apiOrigin) {
     res.status(503).type('text').send('Sitemap service is not configured');
     return;
@@ -31,10 +76,10 @@ app.get('/sitemap.xml', async (_req, res, next) => {
 
   try {
     const sitemap = await fetch(new URL('/api/sitemap.xml', apiOrigin));
+
     res.status(sitemap.status);
-    sitemap.headers.forEach((value, name) => res.setHeader(name, value));
-    if (sitemap.body) Readable.fromWeb(sitemap.body as never).pipe(res);
-    else res.end();
+    forwardUpstreamHeaders(sitemap.headers, res);
+    await forwardUpstreamBody(sitemap.body, res);
   } catch (error) {
     next(error);
   }
@@ -42,6 +87,7 @@ app.get('/sitemap.xml', async (_req, res, next) => {
 
 app.use('/api', async (req, res, next) => {
   const apiOrigin = process.env['API_ORIGIN'];
+
   if (!apiOrigin) {
     res.status(503).json({ message: 'API service is not configured' });
     return;
@@ -49,9 +95,12 @@ app.use('/api', async (req, res, next) => {
 
   try {
     const headers = new Headers(req.headers as HeadersInit);
+
     headers.delete('host');
     headers.delete('connection');
+
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+
     const upstream = await fetch(new URL(req.originalUrl, apiOrigin), {
       method: req.method,
       headers,
@@ -59,15 +108,9 @@ app.use('/api', async (req, res, next) => {
     } as RequestInit);
 
     res.status(upstream.status);
-    upstream.headers.forEach((value, name) => {
-      if (name.toLowerCase() !== 'transfer-encoding' && name.toLowerCase() !== 'connection') {
-        res.setHeader(name, value);
-      }
-    });
-    const cookies = upstream.headers.getSetCookie();
-    if (cookies.length) res.setHeader('set-cookie', cookies);
-    if (upstream.body) Readable.fromWeb(upstream.body as never).pipe(res);
-    else res.end();
+
+    forwardUpstreamHeaders(upstream.headers, res);
+    await forwardUpstreamBody(upstream.body, res);
   } catch (error) {
     next(error);
   }
