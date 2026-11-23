@@ -11,6 +11,7 @@ import {
 } from '../services/cloudinary.service.js';
 
 import { releaseUploadLease } from '../utils/uploadLease.js';
+import { parseBoundedQueryInteger } from '../utils/pagination.js';
 
 // -----------------------------------------------------------------------------
 
@@ -312,14 +313,13 @@ export const getAdminProducts: RequestHandler = async (req, res) => {
 
     const featured = typeof req.query.featured === 'string' ? req.query.featured : 'all';
 
-    const parsedPage = typeof req.query.page === 'string' ? Number.parseInt(req.query.page, 10) : 1;
+    const page = parseBoundedQueryInteger(req.query.page, 1, 10_000);
+    const limit = parseBoundedQueryInteger(req.query.limit, 20, 20);
 
-    const parsedLimit =
-      typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : 20;
-
-    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-
-    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 20) : 20;
+    if (page === null || limit === null) {
+      res.status(400).json({ message: 'Invalid pagination parameters' });
+      return;
+    }
 
     const filter = buildAdminProductFilter({
       search,
@@ -331,16 +331,14 @@ export const getAdminProducts: RequestHandler = async (req, res) => {
       featured,
     });
 
-    const total = await Product.countDocuments(filter);
+    const total = await Product.countDocuments(filter).maxTimeMS(5000);
 
     const items = await Product.find(filter)
 
       .sort({ createdAt: -1 })
-
       .skip((page - 1) * limit)
-
+      .maxTimeMS(5000)
       .limit(limit)
-
       .lean();
 
     const categories = await Product.distinct('category');

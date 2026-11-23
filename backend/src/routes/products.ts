@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { getPublicProduct } from '../controller/public-product.controller.js';
 import Product from '../models/product.js';
+import { parseBoundedQueryInteger } from '../utils/pagination.js';
 
 const router = Router();
 
@@ -12,14 +13,13 @@ router.get('/', async (req, res) => {
 
     const featured = typeof req.query.featured === 'string' ? req.query.featured : 'all';
 
-    const parsedPage = typeof req.query.page === 'string' ? Number.parseInt(req.query.page, 10) : 1;
+    const page = parseBoundedQueryInteger(req.query.page, 1, 10_000);
+    const limit = parseBoundedQueryInteger(req.query.limit, 12, 12);
 
-    const parsedLimit =
-      typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : 12;
-
-    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-
-    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 12) : 12;
+    if (page === null || limit === null) {
+      res.status(400).json({ message: 'Invalid pagination parameters' });
+      return;
+    }
 
     const filter: Record<string, unknown> = {};
 
@@ -31,13 +31,14 @@ router.get('/', async (req, res) => {
       filter.featured = true;
     }
 
-    const total = await Product.countDocuments(filter);
+    const total = await Product.countDocuments(filter).maxTimeMS(5000);
 
     const items = await Product.find(filter)
       .sort({
         featured: -1,
         createdAt: -1,
       })
+      .maxTimeMS(5000)
       .skip((page - 1) * limit)
       .limit(limit)
       .lean();
