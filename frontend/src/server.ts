@@ -27,10 +27,7 @@ const SKIPPED_UPSTREAM_RESPONSE_HEADERS = new Set([
   'set-cookie',
 ]);
 
-function forwardUpstreamHeaders(
-  headers: Headers,
-  res: express.Response,
-): void {
+function forwardUpstreamHeaders(headers: Headers, res: express.Response): void {
   headers.forEach((value, name) => {
     if (!SKIPPED_UPSTREAM_RESPONSE_HEADERS.has(name.toLowerCase())) {
       res.setHeader(name, value);
