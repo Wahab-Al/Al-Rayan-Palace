@@ -79,6 +79,33 @@ npm start
 Open `http://localhost:4200`. The development frontend uses `http://localhost:5000/api` for API requests. The backend's `FRONTEND_ORIGIN` must match `http://localhost:4200` so credentialed requests work.
 
 ## Main API routes
+## Live Deployment (Render)
+
+The application is deployed on [Render](https://render.com/) as two separate services.
+
+| Service | URL | Description |
+|---|---|---|
+| Frontend — Al Rayan Palace UI | https://al-rayan-palace-ui.onrender.com | Public storefront (Angular 22 with SSR). |
+| Backend — Al Rayan Palace API | https://al-rayan-palace.onrender.com | Express REST API connected to MongoDB. |
+
+### Service Health Checks
+
+- **Backend readiness:** https://al-rayan-palace.onrender.com/api/ready
+- **Frontend API proxy readiness:** https://al-rayan-palace-ui.onrender.com/api/ready
+
+Both endpoints should return HTTP `200 OK` when the backend and database are available.
+
+### Deployment Architecture
+
+- The Angular frontend is hosted as a separate Render Web Service.
+- The Express backend is hosted as a separate Render Web Service.
+- The frontend forwards `/api` requests to the backend through its server-side proxy.
+- The browser communicates with the API through the frontend's origin, preserving the admin authentication cookie.
+
+### Hosting Notes
+
+Both services currently use Render's Free instance tier. Free services may spin down after inactivity, causing a delay when the first request arrives.
+
 
 - `GET /api/health` — process liveness.
 - `GET /api/ready` — readiness, including MongoDB connection state.
