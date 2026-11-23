@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test src/controller/product.controller.spec.ts src/controller/auth.controller.spec.ts src/routes/auth.integration.spec.ts src/middleware/validateUploadedMedia.spec.ts src/middleware/uploadMedia.integration.spec.ts src/middleware/requireTrustedOrigin.spec.ts src/middleware/uploadConcurrency.spec.ts src/services/auth.service.spec.ts src/services/cloudinary.service.spec.ts src/routes/admin-products.authorization.integration.spec.ts",
+    "test": "tsx --test src/controller/product.controller.spec.ts src/controller/auth.controller.spec.ts src/routes/auth.integration.spec.ts src/middleware/validateUploadedMedia.spec.ts src/middleware/uploadMedia.integration.spec.ts src/middleware/requireTrustedOrigin.spec.ts src/middleware/uploadConcurrency.spec.ts src/services/auth.service.spec.ts src/services/cloudinary.service.spec.ts src/routes/admin-products.authorization.integration.spec.ts src/utils/pagination.spec.ts",
     "seed": "tsx src/seed.ts",
     "start": "node dist/server.js",
     "format": "prettier --write \"src/**/*.ts\" \"*.json\"",
